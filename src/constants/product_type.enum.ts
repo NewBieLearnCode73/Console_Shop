@@ -1,0 +1,5 @@
+export enum ProductType {
+  DEVICE = 'DEVICE',
+  CARD_PHYSICAL = 'CARD_PHYSICAL',
+  CARD_DIGITAL_KEY = 'CARD_DIGITAL_KEY',
+}

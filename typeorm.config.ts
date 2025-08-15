@@ -13,6 +13,6 @@ export const AppDataSource = new DataSource({
   username: configService.getOrThrow('POSTGRES_USER'),
   password: configService.getOrThrow('POSTGRES_PASSWORD'),
   port: configService.getOrThrow('POSTGRES_PORT'),
-  entities: [__dirname + '/src/modules/**/entity/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/src/migrations/*{.ts,.js}'],
+  entities: ['src/modules/**/entity/*.entity{.ts,.js}'],
+  migrations: ['src/migrations/*{.ts,.js}'],
 });
