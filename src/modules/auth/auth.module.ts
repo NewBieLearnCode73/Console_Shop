@@ -8,6 +8,8 @@ import { AuthService } from './service/auth.service';
 import { UserModule } from '../user/user.module';
 import { AuthController } from './controller/auth.controller';
 import { CustomLocalStrategy } from 'src/custom/custom_local_strategy';
+import { CustomJwtStrategy } from 'src/custom/custom_jwt_strategy';
+import { UserService } from '../user/service/user.service';
 
 @Module({
   imports: [
@@ -25,7 +27,7 @@ import { CustomLocalStrategy } from 'src/custom/custom_local_strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, CustomLocalStrategy],
+  providers: [AuthService, UserService, CustomLocalStrategy, CustomJwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}
