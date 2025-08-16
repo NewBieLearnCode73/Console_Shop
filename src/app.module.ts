@@ -7,6 +7,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { RefundModule } from './modules/refund/refund.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { ConfigModule } from '@nestjs/config';
+import { SupabaseModule } from './modules/supabase/supabase.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ConfigModule } from '@nestjs/config';
     PaymentModule,
     RefundModule,
     DatabaseModule,
+    SupabaseModule,
   ],
   controllers: [],
   providers: [],
