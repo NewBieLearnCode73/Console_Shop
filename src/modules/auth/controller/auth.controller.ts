@@ -14,14 +14,16 @@ import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { RolesDecorator } from 'src/decorators/role_decorator';
 import { Role } from 'src/constants/role.enum';
 import { RolesGuard } from 'src/guards/role.guard';
+import { GoogleOAuthGuard } from 'src/guards/google_oauth.guard';
+import { User } from 'src/modules/user/entity/user.entity';
 
-@Controller('auth')
+@Controller('api/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
-  login(@Request() req: AuthenticationRequest) {
+  localLogin(@Request() req: AuthenticationRequest) {
     return this.authService.login(req.user);
   }
 
@@ -44,5 +46,16 @@ export class AuthController {
     return {
       message: 'This is a test endpoint',
     };
+  }
+
+  @Get('google')
+  @UseGuards(GoogleOAuthGuard)
+  async googleLogin() {}
+
+  @Get('/oauth2/callback/google')
+  @UseGuards(GoogleOAuthGuard)
+  googleAuthCallback(@Request() req: AuthenticationRequest) {
+    console.log('Google Auth Callback:', req.user);
+    return { message: 'Google authentication successful', user: req.user };
   }
 }

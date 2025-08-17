@@ -10,6 +10,7 @@ import { AuthController } from './controller/auth.controller';
 import { CustomLocalStrategy } from 'src/custom/custom_local_strategy';
 import { CustomJwtStrategy } from 'src/custom/custom_jwt_strategy';
 import { UserService } from '../user/service/user.service';
+import { CustomGoogleStrategy } from 'src/custom/custom_google_strategy';
 
 @Module({
   imports: [
@@ -27,7 +28,13 @@ import { UserService } from '../user/service/user.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserService, CustomLocalStrategy, CustomJwtStrategy],
+  providers: [
+    AuthService,
+    UserService,
+    CustomLocalStrategy,
+    CustomJwtStrategy,
+    CustomGoogleStrategy,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}
