@@ -15,7 +15,7 @@ import { RolesDecorator } from 'src/decorators/role_decorator';
 import { Role } from 'src/constants/role.enum';
 import { RolesGuard } from 'src/guards/role.guard';
 import { GoogleOAuthGuard } from 'src/guards/google_oauth.guard';
-import { User } from 'src/modules/user/entity/user.entity';
+import { FacebookOAuthGuard } from 'src/guards/facebook_oauth.guard';
 
 @Controller('api/auth')
 export class AuthController {
@@ -55,7 +55,16 @@ export class AuthController {
   @Get('/oauth2/callback/google')
   @UseGuards(GoogleOAuthGuard)
   googleAuthCallback(@Request() req: AuthenticationRequest) {
-    console.log('Google Auth Callback:', req.user);
-    return { message: 'Google authentication successful', user: req.user };
+    return this.authService.login(req.user);
+  }
+
+  @Get('facebook')
+  @UseGuards(FacebookOAuthGuard)
+  async facebookLogin() {}
+
+  @Get('oauth2/callback/facebook')
+  @UseGuards(FacebookOAuthGuard)
+  facebookAuthCallback(@Request() req: AuthenticationRequest) {
+    return this.authService.login(req.user);
   }
 }

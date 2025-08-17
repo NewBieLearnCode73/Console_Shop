@@ -21,6 +21,7 @@ export class UserService {
   async createNewUser(email: string): Promise<User> {
     const newUser = this.userRepository.create({
       email,
+      is_active: true,
     });
     await this.userRepository.save(newUser);
 

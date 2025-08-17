@@ -11,6 +11,7 @@ import { CustomLocalStrategy } from 'src/custom/custom_local_strategy';
 import { CustomJwtStrategy } from 'src/custom/custom_jwt_strategy';
 import { UserService } from '../user/service/user.service';
 import { CustomGoogleStrategy } from 'src/custom/custom_google_strategy';
+import { CustomFacebookStrategy } from 'src/custom/custom_facebook_strategy';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CustomGoogleStrategy } from 'src/custom/custom_google_strategy';
     CustomLocalStrategy,
     CustomJwtStrategy,
     CustomGoogleStrategy,
+    CustomFacebookStrategy,
   ],
   exports: [AuthService],
 })

@@ -7,7 +7,7 @@ interface Photo {
   value: string;
 }
 
-export interface GoogleProfileResponse {
+export interface ProfileResponse {
   id: string;
   displayName: string;
   emails: Array<Email>;
