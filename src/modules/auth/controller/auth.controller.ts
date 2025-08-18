@@ -10,10 +10,6 @@ import { AuthService } from '../service/auth.service';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import { LocalAuthGuard } from 'src/guards/local_auth.guard';
 import { RegisterDto } from '../dto/register.dto';
-import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
-import { RolesDecorator } from 'src/decorators/role_decorator';
-import { Role } from 'src/constants/role.enum';
-import { RolesGuard } from 'src/guards/role.guard';
 import { GoogleOAuthGuard } from 'src/guards/google_oauth.guard';
 import { FacebookOAuthGuard } from 'src/guards/facebook_oauth.guard';
 
@@ -32,22 +28,7 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
-  @Get('checkJwt')
-  @UseGuards(JwtAuthGuard)
-  checkJwt(@Request() req: AuthenticationRequest) {
-    console.log('JWT Payload:', req.user);
-    return { message: 'JWT is valid' };
-  }
-
-  @Get('test')
-  @RolesDecorator(Role.CUSTOMER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  test() {
-    return {
-      message: 'This is a test endpoint',
-    };
-  }
-
+  // Login with google
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
   async googleLogin() {}
@@ -58,6 +39,7 @@ export class AuthController {
     return this.authService.login(req.user);
   }
 
+  // Login with facebook
   @Get('facebook')
   @UseGuards(FacebookOAuthGuard)
   async facebookLogin() {}

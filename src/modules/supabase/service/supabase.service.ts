@@ -5,6 +5,16 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export class SupabaseService {
   constructor(private readonly supabaseClient: SupabaseClient) {}
 
+  async deleteUserAvatar(userId: string) {
+    const { data, error } = await this.supabaseClient.storage
+      .from('user_avatar')
+      .list(userId);
+
+    const pathFile = `${userId}/${data?.[0]?.name}`;
+
+    await this.supabaseClient.storage.from('user_avatar').remove([pathFile]);
+  }
+
   async uploadUserAvatar(file: Express.Multer.File, userId: string) {
     const allowedMimeTypes = [
       'image/jpeg',
