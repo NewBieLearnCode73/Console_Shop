@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -7,6 +8,7 @@ import { Repository } from 'typeorm';
 import { User } from '../entity/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Role } from 'src/constants/role.enum';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class UserService {
@@ -16,6 +18,9 @@ export class UserService {
   ) {}
 
   async findUserWithProfile(id: string) {
+    if (!isUUID(id)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
     return this.userRepository.findOne({
       where: { id },
       relations: ['profile'],
@@ -46,8 +51,12 @@ export class UserService {
     });
   }
 
-  async findUserById(id: string): Promise<User | null> {
-    return await this.userRepository.findOne({ where: { id } });
+  async findUserById(userId: string): Promise<User | null> {
+    if (!isUUID(userId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
+    return await this.userRepository.findOne({ where: { id: userId } });
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
@@ -65,6 +74,10 @@ export class UserService {
   }
 
   async activeUserById(userId: string) {
+    if (!isUUID(userId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found!`);
@@ -82,6 +95,10 @@ export class UserService {
   }
 
   async changeUserRoleById(userId: string, role: Role) {
+    if (!isUUID(userId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found!`);
