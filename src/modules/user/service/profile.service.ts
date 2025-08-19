@@ -3,7 +3,10 @@ import { Profile } from '../entity/profile.entity';
 import { Repository } from 'typeorm';
 import { CreateProfileDto } from '../dto/create-profile.dto';
 import { User } from '../entity/user.entity';
-import { NotFoundException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SupabaseService } from 'src/modules/supabase/service/supabase.service';
 
 export class ProfileService {
@@ -47,31 +50,44 @@ export class ProfileService {
     return this.profileRepository.save(profile);
   }
 
-  // Update image
+  // Update user avatar
   async updateUserAvatar(userId: string, file: Express.Multer.File) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    const avatarUrl = await this.supabaseService.uploadUserAvatar(
-      file,
-      user.id,
-    );
 
     const profile = await this.profileRepository.findOne({
-      where: { user_id: user.id },
+      where: { user_id: userId },
     });
-
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
 
-    profile.avatar_url = avatarUrl;
-    return this.profileRepository.save(profile);
+    if (profile.avatar_url) {
+      await this.deleteUserAvatar(userId);
+    }
+
+    try {
+      const avatarUrl = await this.supabaseService.uploadUserAvatar(
+        file,
+        user.id,
+      );
+
+      profile.avatar_url = avatarUrl;
+      return await this.profileRepository.save(profile);
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException('Upload avatar failed');
+    }
   }
 
   // Delete user avatar
   async deleteUserAvatar(userId: string) {
-    await this.supabaseService.deleteUserAvatar(userId);
+    try {
+      return await this.supabaseService.deleteUserAvatar(userId);
+    } catch (error) {
+      throw new InternalServerErrorException('Delete avatar failed');
+    }
   }
 }

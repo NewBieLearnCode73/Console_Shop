@@ -17,12 +17,33 @@ export class UserService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async findUserWithProfile(id: string) {
-    if (!isUUID(id)) {
+  async findUserWithProfile(userId: string) {
+    if (!isUUID(userId)) {
       throw new BadRequestException('UUID is not accepted!');
     }
-    return this.userRepository.findOne({
-      where: { id },
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+      select: {
+        id: true,
+        role: true,
+        is_active: true,
+        profile: {
+          fullname: true,
+          avatar_url: true,
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} is not found!`);
+    }
+
+    return user;
+  }
+
+  async findAllUserWithProfile() {
+    return await this.userRepository.find({
       relations: ['profile'],
       select: {
         id: true,
@@ -36,8 +57,29 @@ export class UserService {
     });
   }
 
-  async findAllUserWithProfile() {
-    return this.userRepository.find({
+  async findAllUserIsCustomerWithProfile() {
+    return await this.userRepository.find({
+      relations: ['profile'],
+      select: {
+        id: true,
+        role: true,
+        is_active: true,
+        profile: {
+          fullname: true,
+          avatar_url: true,
+        },
+      },
+      where: { role: Role.CUSTOMER },
+    });
+  }
+
+  async findUserIsCustomerWithProfile(userId: string) {
+    if (!isUUID(userId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
+    return await this.userRepository.findOne({
+      where: { id: userId, role: Role.CUSTOMER },
       relations: ['profile'],
       select: {
         id: true,
@@ -88,6 +130,31 @@ export class UserService {
     }
 
     user.is_active = true;
+    const updateUser = await this.userRepository.save(user);
+    const { password, ...result } = updateUser;
+
+    return result;
+  }
+
+  async activeUserIsCustomerById(userId: string) {
+    if (!isUUID(userId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId, role: Role.CUSTOMER },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found!`);
+    }
+
+    if (user.is_active === true) {
+      throw new ConflictException(`User with id ${userId} was actived!`);
+    }
+
+    user.is_active = true;
+
     const updateUser = await this.userRepository.save(user);
     const { password, ...result } = updateUser;
 

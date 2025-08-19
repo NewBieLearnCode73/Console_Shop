@@ -22,14 +22,6 @@ import { RolesGuard } from 'src/guards/role.guard';
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
-  //Get User Profile by id
-  @Get(':id')
-  @RolesDecorator(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async getUserProfileById(@Param('id') userId: string) {
-    // return u
-  }
-
   // Get profile
   @Get()
   @UseGuards(JwtAuthGuard)
@@ -56,12 +48,5 @@ export class ProfileController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.profileService.updateUserAvatar(req.user.id, file);
-  }
-
-  // Delete User Avatar
-  @Get('del')
-  @UseGuards(JwtAuthGuard)
-  async deleteUserAvatar(@Request() req: AuthenticationRequest) {
-    return this.profileService.deleteUserAvatar(req.user.id);
   }
 }

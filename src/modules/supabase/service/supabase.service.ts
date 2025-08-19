@@ -1,4 +1,8 @@
-import { Injectable, NotAcceptableException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotAcceptableException,
+} from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
@@ -9,6 +13,12 @@ export class SupabaseService {
     const { data, error } = await this.supabaseClient.storage
       .from('user_avatar')
       .list(userId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        'Some thing was wrong with user image!',
+      );
+    }
 
     const pathFile = `${userId}/${data?.[0]?.name}`;
 

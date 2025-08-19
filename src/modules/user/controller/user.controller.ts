@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { SupabaseService } from 'src/modules/supabase/service/supabase.service';
 import { ProfileService } from '../service/profile.service';
 import { Role } from 'src/constants/role.enum';
 import { UserService } from '../service/user.service';
+import { RolesDecorator } from 'src/decorators/role_decorator';
+import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
+import { RolesGuard } from 'src/guards/role.guard';
 
 @Controller('api/users')
 export class UserController {
@@ -11,6 +14,10 @@ export class UserController {
     private readonly profileService: ProfileService,
     private readonly userService: UserService,
   ) {}
+
+  // *****************************************************************//
+  // ***************************** COMMON ****************************//
+  // *****************************************************************//
 
   // *****************************************************************//
   // ***************************** ADMIN *****************************//
@@ -47,4 +54,36 @@ export class UserController {
   async changeUserRoleById(@Param('id') id: string, @Body('role') role: Role) {
     return this.userService.changeUserRoleById(id, role);
   }
+
+  // *****************************************************************//
+  // ***************************** MANAGER ***************************//
+  // *****************************************************************//
+
+  //  GET ALL USER WITH PROFILE
+  @Get('manager')
+  // @RolesDecorator(Role.MANAGER)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  async getAllUserIsCustomerWithProfile() {
+    return this.userService.findAllUserIsCustomerWithProfile();
+  }
+
+  // GET USER BY ID WITH PROFILE
+  @Get('manager/:id')
+  // @RolesDecorator(Role.MANAGER)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  async getUserIsCustomerById(@Param('id') id: string) {
+    return this.userService.findUserIsCustomerWithProfile(id);
+  }
+
+  // ACTIVE USER HAS ROLE CUSTOMER
+  @Patch('manager/active/:id')
+  // @RolesDecorator(Role.MANAGER)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  async activeUserIsCustomerById(@Param('id') id: string) {
+    return this.userService.activeUserIsCustomerById(id);
+  }
+
+  // *****************************************************************//
+  // ***************************** CUSTOMER **************************//
+  // *****************************************************************//
 }
