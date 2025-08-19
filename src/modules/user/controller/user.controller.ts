@@ -16,6 +16,7 @@ export class UserController {
   // ***************************** ADMIN *****************************//
   // *****************************************************************//
 
+  // GET ALL USER WITH PROFILE
   @Get('admin')
   // @RolesDecorator(Role.ADMIN)
   // @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,6 +24,7 @@ export class UserController {
     return this.userService.findAllUserWithProfile();
   }
 
+  // GET USER BY ID WITH PROFILE
   @Get('admin/:id')
   // @RolesDecorator(Role.ADMIN)
   // @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,6 +32,7 @@ export class UserController {
     return this.userService.findUserWithProfile(id);
   }
 
+  // ACTIVE USER BY ID
   @Patch('admin/active/:id')
   // @RolesDecorator(Role.ADMIN)
   // @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,6 +40,7 @@ export class UserController {
     return this.userService.activeUserById(id);
   }
 
+  // CHANGE ROLE USER BY ID
   @Patch('admin/change-role/:id')
   // @RolesDecorator(Role.ADMIN)
   // @UseGuards(JwtAuthGuard, RolesGuard)
