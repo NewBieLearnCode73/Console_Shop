@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Param,
   Post,
   Request,
   UploadedFile,
@@ -12,28 +11,25 @@ import {
 import { ProfileService } from '../service/profile.service';
 import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
-import { CreateProfileDto } from '../dto/create-profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { RolesDecorator } from 'src/decorators/role_decorator';
-import { Role } from 'src/constants/role.enum';
-import { RolesGuard } from 'src/guards/role.guard';
+import { CreateProfileRequestDto } from '../dto/request/profile-request.dto';
 
 @Controller('api/profiles')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
-  // Get profile
+  // GET PROFILE BY JWT
   @Get()
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req: AuthenticationRequest) {
     return this.profileService.getProfile(req.user.id);
   }
 
-  // Update profile (Not include image)
+  // UPDATE PROFILE BY JWT (Not include image)
   @Post()
   @UseGuards(JwtAuthGuard)
   async createProfile(
-    @Body() createProfileDto: CreateProfileDto,
+    @Body() createProfileDto: CreateProfileRequestDto,
     @Request() req: AuthenticationRequest,
   ) {
     return this.profileService.createProfile(req.user.id, createProfileDto);

@@ -1,13 +1,13 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Profile } from '../entity/profile.entity';
 import { Repository } from 'typeorm';
-import { CreateProfileDto } from '../dto/create-profile.dto';
 import { User } from '../entity/user.entity';
 import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from 'src/modules/supabase/service/supabase.service';
+import { CreateProfileRequestDto } from '../dto/request/profile-request.dto';
 
 export class ProfileService {
   constructor(
@@ -37,7 +37,10 @@ export class ProfileService {
   }
 
   // Create profile (Not include upload image!)
-  async createProfile(userId: string, createProfileDto: CreateProfileDto) {
+  async createProfile(
+    userId: string,
+    createProfileDto: CreateProfileRequestDto,
+  ) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');

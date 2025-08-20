@@ -9,7 +9,6 @@ import { UserModule } from '../user/user.module';
 import { AuthController } from './controller/auth.controller';
 import { CustomLocalStrategy } from 'src/custom/custom_local_strategy';
 import { CustomJwtStrategy } from 'src/custom/custom_jwt_strategy';
-import { UserService } from '../user/service/user.service';
 import { CustomGoogleStrategy } from 'src/custom/custom_google_strategy';
 import { CustomFacebookStrategy } from 'src/custom/custom_facebook_strategy';
 
@@ -31,7 +30,6 @@ import { CustomFacebookStrategy } from 'src/custom/custom_facebook_strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
-    UserService,
     CustomLocalStrategy,
     CustomJwtStrategy,
     CustomGoogleStrategy,
