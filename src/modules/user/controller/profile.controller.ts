@@ -35,7 +35,7 @@ export class ProfileController {
     return this.profileService.createProfile(req.user.id, createProfileDto);
   }
 
-  // Upload image
+  // UPLOAD IMAGE
   @Post('update-image')
   @UseInterceptors(FileInterceptor('file'))
   @UseGuards(JwtAuthGuard)

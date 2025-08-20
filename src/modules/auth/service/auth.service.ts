@@ -42,6 +42,12 @@ export class AuthService {
       );
     }
 
+    if (!user.password) {
+      throw new UnauthorizedException(
+        'Your account may have been registered using a social network, please select the appropriate login method!',
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException(

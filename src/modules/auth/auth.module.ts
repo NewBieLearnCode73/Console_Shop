@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/entity/user.entity';
 import { PassportModule } from '@nestjs/passport';
@@ -11,6 +16,7 @@ import { CustomLocalStrategy } from 'src/custom/custom_local_strategy';
 import { CustomJwtStrategy } from 'src/custom/custom_jwt_strategy';
 import { CustomGoogleStrategy } from 'src/custom/custom_google_strategy';
 import { CustomFacebookStrategy } from 'src/custom/custom_facebook_strategy';
+import { validateLoginDtoMiddleware } from 'src/middlewares/validatedto.middleware';
 
 @Module({
   imports: [
@@ -34,7 +40,14 @@ import { CustomFacebookStrategy } from 'src/custom/custom_facebook_strategy';
     CustomJwtStrategy,
     CustomGoogleStrategy,
     CustomFacebookStrategy,
+    validateLoginDtoMiddleware,
   ],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(validateLoginDtoMiddleware)
+      .forRoutes({ path: 'api/auth/login', method: RequestMethod.POST });
+  }
+}

@@ -3,6 +3,7 @@ import { Profile } from '../entity/profile.entity';
 import { Repository } from 'typeorm';
 import { User } from '../entity/user.entity';
 import {
+  ConflictException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -44,6 +45,14 @@ export class ProfileService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    // Only create profile if it doesn't exist
+    const existingProfile = await this.profileRepository.findOne({
+      where: { user_id: user.id },
+    });
+    if (existingProfile) {
+      throw new ConflictException('This user already has a profile!');
     }
 
     const profile = this.profileRepository.create({
