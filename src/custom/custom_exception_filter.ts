@@ -21,11 +21,29 @@ export class CustomExceptionFilter implements ExceptionFilter {
     let error = 'InternalServerError';
     let message = ['Some thing went wrong with server. Please try again!'];
 
-    // Handle HttpException
+    /// Handle HttpException
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       error = exception.name;
-      message = [exception.message];
+      message = [];
+
+      const response = exception.getResponse();
+
+      // Response is an object (Validate DTO)
+      if (typeof response === 'object' && response !== null) {
+        const resMessage = (response as any).message;
+
+        if (typeof resMessage === 'string') {
+          message.push(resMessage);
+        } else if (Array.isArray(resMessage)) {
+          message.push(...resMessage);
+        }
+      }
+
+      // Response is a string (Throw HttpException)
+      if (typeof response === 'string') {
+        message.push(response);
+      }
     }
 
     // Handle ValidationError

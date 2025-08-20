@@ -9,9 +9,9 @@ import {
 import { AuthService } from '../service/auth.service';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import { LocalAuthGuard } from 'src/guards/local_auth.guard';
-import { RegisterDto } from '../dto/register.dto';
 import { GoogleOAuthGuard } from 'src/guards/google_oauth.guard';
 import { FacebookOAuthGuard } from 'src/guards/facebook_oauth.guard';
+import { registerRequestDto } from '../dto/request/auth-request.dto';
 
 @Controller('api/auth')
 export class AuthController {
@@ -24,8 +24,8 @@ export class AuthController {
   }
 
   @Post('register')
-  register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  register(@Body() registerRequestDto: registerRequestDto) {
+    return this.authService.register(registerRequestDto);
   }
 
   // Login with google

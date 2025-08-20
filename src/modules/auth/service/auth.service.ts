@@ -9,7 +9,7 @@ import { User } from 'src/modules/user/entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import bcrypt from 'bcrypt';
 import { JwtPayload } from 'src/interfaces/payload';
-import { RegisterDto } from '../dto/register.dto';
+import { registerRequestDto } from '../dto/request/auth-request.dto';
 
 @Injectable()
 export class AuthService {
@@ -71,19 +71,19 @@ export class AuthService {
     };
   }
 
-  async register(registerDto: RegisterDto) {
+  async register(registerRequestDto: registerRequestDto) {
     const userExists = await this.userRepository.findOne({
-      where: { email: registerDto.email },
+      where: { email: registerRequestDto.email },
     });
 
     if (userExists) {
       throw new ConflictException('Email already exists!');
     }
 
-    const hashedPassword = await this.hashPassword(registerDto.password);
+    const hashedPassword = await this.hashPassword(registerRequestDto.password);
 
     const newUser = this.userRepository.create({
-      email: registerDto.email,
+      email: registerRequestDto.email,
       password: hashedPassword,
     });
 

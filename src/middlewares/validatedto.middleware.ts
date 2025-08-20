@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { validate, validateOrReject } from 'class-validator';
+import { validateOrReject } from 'class-validator';
 import { Request, Response, NextFunction } from 'express'; // 👈 import từ express
 import { LoginRequestDto } from 'src/modules/auth/dto/request/auth-request.dto';
 
