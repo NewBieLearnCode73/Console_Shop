@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Request,
   UploadedFile,
@@ -12,7 +13,10 @@ import { ProfileService } from '../service/profile.service';
 import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { CreateProfileRequestDto } from '../dto/request/profile-request.dto';
+import {
+  CreateProfileRequestDto,
+  UpdateProfileRequestDto,
+} from '../dto/request/profile-request.dto';
 
 @Controller('api/profiles')
 export class ProfileController {
@@ -25,7 +29,7 @@ export class ProfileController {
     return this.profileService.getProfile(req.user.id);
   }
 
-  // UPDATE PROFILE BY JWT (Not include image)
+  // CREATE PROFILE BY JWT (Not include image)
   @Post()
   @UseGuards(JwtAuthGuard)
   async createProfile(
@@ -44,5 +48,15 @@ export class ProfileController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.profileService.updateUserAvatar(req.user.id, file);
+  }
+
+  // Update profile (Not include image)
+  @Patch()
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(
+    @Body() updateProfileDto: UpdateProfileRequestDto,
+    @Request() req: AuthenticationRequest,
+  ) {
+    return this.profileService.updateProfile(req.user.id, updateProfileDto);
   }
 }

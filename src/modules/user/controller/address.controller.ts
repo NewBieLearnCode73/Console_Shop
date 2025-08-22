@@ -27,6 +27,13 @@ export class AddresController {
     return this.addressService.getAllAdressByUserId(req.user.id);
   }
 
+  // GET DEFAULT ADDRESS BASE ON JWT
+  @Get('default')
+  @UseGuards(JwtAuthGuard)
+  async getDefaultAddress(@Request() req: AuthenticationRequest) {
+    return this.addressService.getDefaultAddressByUserId(req.user.id);
+  }
+
   // CREATE NEW USER ADDRESS BASE ON JWT
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -40,14 +47,7 @@ export class AddresController {
     );
   }
 
-  // GET DEFAULT ADDRESS BASE ON JWT
-  @Get('default')
-  @UseGuards(JwtAuthGuard)
-  async getDefaultAddress(@Request() req: AuthenticationRequest) {
-    return this.addressService.getDefaultAddressByUserId(req.user.id);
-  }
-
-  // UPDATE USER ADDRESS BASE
+  // UPDATE USER ADDRESS BASE ON JWT
   @Patch('update/:id')
   @UseGuards(JwtAuthGuard)
   async updateUserAddress(

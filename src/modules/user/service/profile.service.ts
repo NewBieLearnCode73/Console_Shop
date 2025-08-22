@@ -8,7 +8,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from 'src/modules/supabase/service/supabase.service';
-import { CreateProfileRequestDto } from '../dto/request/profile-request.dto';
+import {
+  CreateProfileRequestDto,
+  UpdateProfileRequestDto,
+} from '../dto/request/profile-request.dto';
 
 export class ProfileService {
   constructor(
@@ -59,6 +62,28 @@ export class ProfileService {
       user_id: user.id,
       ...createProfileDto,
     });
+    return this.profileRepository.save(profile);
+  }
+
+  // Update profile (Not include image)
+  async updateProfile(
+    userId: string,
+    updateProfileDto: UpdateProfileRequestDto,
+  ) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const profile = await this.profileRepository.findOne({
+      where: { user_id: userId },
+    });
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    // Update profile fields
+    Object.assign(profile, updateProfileDto);
     return this.profileRepository.save(profile);
   }
 
