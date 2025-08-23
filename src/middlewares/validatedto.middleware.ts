@@ -7,7 +7,6 @@ import { LoginRequestDto } from 'src/modules/auth/dto/request/auth-request.dto';
 @Injectable()
 export class validateLoginDtoMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
-    // Chuyển dữ liệu body thành DTO instance
     const loginRequestDto = plainToInstance(LoginRequestDto, req.body);
 
     // Validate DTO instance

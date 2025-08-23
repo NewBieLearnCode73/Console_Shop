@@ -7,6 +7,8 @@ import { ProductImage } from './entity/product_image.entity';
 import { ProductVariant } from './entity/product_variant.entity';
 import { Product } from './entity/product.entity';
 import { Stock } from './entity/stock.entity';
+import { CategoryController } from './controller/category.controller';
+import { CategoryService } from './service/category.service';
 
 @Module({
   imports: [
@@ -20,7 +22,8 @@ import { Stock } from './entity/stock.entity';
       Stock,
     ]),
   ],
-  controllers: [],
-  providers: [],
+  controllers: [CategoryController],
+  providers: [CategoryService],
+  exports: [],
 })
 export class ProductModule {}
