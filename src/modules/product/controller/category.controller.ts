@@ -33,15 +33,15 @@ export class CategoryController {
   }
 
   @Post()
-  @RolesDecorator(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  // @RolesDecorator(Role.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
   async create(@Body() createCategoryDto: CreateCategoryRequestDto) {
     return this.categoryService.createCategory(createCategoryDto);
   }
 
   @Put(':id')
-  @RolesDecorator(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  // @RolesDecorator(Role.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
   async update(
     @Param('id') id: string,
     @Body() updateCategoryDto: UpdateCategoryRequestDto,
@@ -50,8 +50,8 @@ export class CategoryController {
   }
 
   @Delete(':id')
-  @RolesDecorator(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  // @RolesDecorator(Role.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
   async delete(@Param('id') id: string) {
     return this.categoryService.deleteCategory(id);
   }

@@ -1,4 +1,5 @@
 import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { ProductStatus } from 'src/constants/product_status.enum';
 import { ProductType } from 'src/constants/product_type.enum';
 
 export class CreateProductRequestDto {
@@ -19,9 +20,6 @@ export class CreateProductRequestDto {
 
   @IsString()
   seo_description?: string;
-
-  @IsString()
-  seo_keywords?: string;
 
   @IsNotEmpty()
   @IsUUID()
@@ -48,12 +46,15 @@ export class UpdateProductRequestDto {
   @IsString()
   seo_description?: string;
 
-  @IsString()
-  seo_keywords?: string;
-
   @IsUUID()
   category_id?: string;
 
   @IsUUID()
   brand_id?: string;
+}
+
+export class UpdateProductStatusRequestDto {
+  @IsNotEmpty()
+  @IsEnum(ProductStatus)
+  status: ProductStatus;
 }

@@ -59,4 +59,42 @@ export class SupabaseService {
 
     return publicUrlData.publicUrl;
   }
+
+  async uploadProductImage(
+    file: Express.Multer.File,
+    productVariantId: string,
+  ) {
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/svg+xml',
+    ];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new NotAcceptableException(
+        'Please upload a valid image file (JPEG, PNG, WEBP, SVG)',
+      );
+    }
+
+    const newFileName = `${productVariantId}/${Date.now()}`;
+
+    const { data: uploadData, error } = await this.supabaseClient.storage
+      .from('product_variant_images')
+      .upload(newFileName, file.buffer, {
+        contentType: file.mimetype,
+        cacheControl: '3600',
+      });
+
+    if (error) {
+      throw new NotAcceptableException(
+        `Failed to upload product variant images: ${error.message}`,
+      );
+    }
+
+    const { data: publicUrlData } = this.supabaseClient.storage
+      .from('product_variant_images')
+      .getPublicUrl(uploadData.path);
+
+    return publicUrlData.publicUrl;
+  }
 }
