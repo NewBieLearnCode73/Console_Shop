@@ -9,6 +9,8 @@ import { Product } from './entity/product.entity';
 import { Stock } from './entity/stock.entity';
 import { CategoryController } from './controller/category.controller';
 import { CategoryService } from './service/category.service';
+import { BrandController } from './controller/brand.controller';
+import { BrandService } from './service/brand.service';
 
 @Module({
   imports: [
@@ -22,8 +24,8 @@ import { CategoryService } from './service/category.service';
       Stock,
     ]),
   ],
-  controllers: [CategoryController],
-  providers: [CategoryService],
+  controllers: [CategoryController, BrandController],
+  providers: [CategoryService, BrandService],
   exports: [],
 })
 export class ProductModule {}

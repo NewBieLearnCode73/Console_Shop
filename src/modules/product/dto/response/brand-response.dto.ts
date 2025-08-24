@@ -13,3 +13,11 @@ export class UpdateBrandResponseDto {
   seo_title?: string;
   seo_description?: string;
 }
+
+export class BrandResponseDto {
+  id: string;
+  name: string;
+  description: string;
+  seo_title?: string;
+  seo_description?: string;
+}

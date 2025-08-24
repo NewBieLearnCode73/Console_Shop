@@ -23,7 +23,7 @@ export class CreateBrandRequestDto {
 }
 
 export class UpdateBrandRequestDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   @MaxLength(255)
   name?: string;
