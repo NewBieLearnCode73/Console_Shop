@@ -13,7 +13,7 @@ import {
   CreateBrandRequestDto,
   UpdateBrandRequestDto,
 } from '../dto/request/brand-request.dto';
-import { generateSlugByName } from 'src/utils/main_helper';
+import { generateSlug } from 'src/utils/main_helper';
 
 @Injectable()
 export class BrandService {
@@ -46,7 +46,7 @@ export class BrandService {
   async createBrand(createBrandRequestDto: CreateBrandRequestDto) {
     const brand = this.brandRepository.create(createBrandRequestDto);
 
-    brand.slug = generateSlugByName(brand.name);
+    brand.slug = generateSlug(brand.name);
 
     await this.brandRepository.save(brand);
     return plainToInstance(BrandResponseDto, brand);
@@ -63,7 +63,7 @@ export class BrandService {
     }
 
     this.brandRepository.merge(brand, updateBrandRequestDto);
-    brand.slug = generateSlugByName(brand.name);
+    brand.slug = generateSlug(brand.name);
 
     await this.brandRepository.save(brand);
     return plainToInstance(BrandResponseDto, brand);

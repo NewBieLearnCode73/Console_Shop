@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -25,7 +26,7 @@ export class ProductController {
   }
 
   @Get(':id')
-  async findProductById(@Param('id') id: string) {
+  async findProductById(@Param('id', ParseUUIDPipe) id: string) {
     return this.productService.findOne(id);
   }
 
@@ -36,7 +37,7 @@ export class ProductController {
 
   @Put(':id')
   async updateProduct(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProductDto: UpdateProductRequestDto,
   ) {
     return this.productService.updateProduct(id, updateProductDto);
@@ -44,14 +45,14 @@ export class ProductController {
 
   @Patch(':id')
   async updateProductStatus(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProductStatusDto: UpdateProductStatusRequestDto,
   ) {
     return this.productService.updateProductStatus(id, updateProductStatusDto);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id', ParseUUIDPipe) id: string) {
     return this.productService.deleteProduct(id);
   }
 }

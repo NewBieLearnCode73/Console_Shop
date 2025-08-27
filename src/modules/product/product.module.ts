@@ -13,6 +13,9 @@ import { BrandController } from './controller/brand.controller';
 import { BrandService } from './service/brand.service';
 import { ProductController } from './controller/product.controller';
 import { ProductService } from './service/product.service';
+import { ProductVariantController } from './controller/product-variant.controller';
+import { ProductVariantService } from './service/product_variant.service';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
   imports: [
@@ -25,9 +28,20 @@ import { ProductService } from './service/product.service';
       Product,
       Stock,
     ]),
+    SupabaseModule,
   ],
-  controllers: [CategoryController, BrandController, ProductController],
-  providers: [CategoryService, BrandService, ProductService],
-  exports: [],
+  controllers: [
+    CategoryController,
+    BrandController,
+    ProductController,
+    ProductVariantController,
+  ],
+  providers: [
+    CategoryService,
+    BrandService,
+    ProductService,
+    ProductVariantService,
+  ],
+  exports: [ProductVariantService],
 })
 export class ProductModule {}

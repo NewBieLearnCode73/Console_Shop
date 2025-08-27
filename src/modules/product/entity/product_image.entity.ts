@@ -7,13 +7,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ProductVariant } from './product_variant.entity';
-import { SeoType } from 'src/interfaces/seo_type';
 
 @Entity()
-export class ProductImage
-  extends AbstractEntity<ProductImage>
-  implements SeoType
-{
+export class ProductImage extends AbstractEntity<ProductImage> {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -22,15 +18,6 @@ export class ProductImage
 
   @Column({ nullable: false, default: false })
   is_main: boolean;
-
-  @Column({ nullable: false, unique: true })
-  slug: string;
-
-  @Column({ nullable: false })
-  seo_title?: string;
-
-  @Column({ nullable: false })
-  seo_description?: string;
 
   @ManyToOne(() => ProductVariant, (productVariant) => productVariant.images, {
     onDelete: 'CASCADE',

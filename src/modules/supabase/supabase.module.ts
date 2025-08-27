@@ -4,7 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from './service/supabase.service';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, ConfigModule],
   providers: [
     {
       provide: SupabaseClient,

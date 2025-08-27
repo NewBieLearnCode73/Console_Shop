@@ -16,7 +16,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { generateSlugByName } from 'src/utils/main_helper';
+import { generateSlug } from 'src/utils/main_helper';
 
 @Injectable()
 export class CategoryService {
@@ -52,7 +52,7 @@ export class CategoryService {
 
   async createCategory(createCategoryRequestDto: CreateCategoryRequestDto) {
     const category = this.categoryRepository.create(createCategoryRequestDto);
-    category.slug = generateSlugByName(category.name);
+    category.slug = generateSlug(category.name);
 
     if (createCategoryRequestDto.parent_id) {
       const parentCategory = await this.categoryRepository.findOne({
@@ -99,7 +99,7 @@ export class CategoryService {
     }
 
     this.categoryRepository.merge(category, updateCategoryRequestDto);
-    category.slug = generateSlugByName(category.name);
+    category.slug = generateSlug(category.name);
     await this.categoryRepository.save(category);
     return plainToInstance(CategoryResponseDto, category);
   }

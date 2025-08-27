@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   UseGuards,
@@ -13,10 +14,10 @@ import {
   CreateCategoryRequestDto,
   UpdateCategoryRequestDto,
 } from '../dto/request/category-request.dto';
-import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
-import { RolesDecorator } from 'src/decorators/role_decorator';
-import { Role } from 'src/constants/role.enum';
-import { RolesGuard } from 'src/guards/role.guard';
+// import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
+// import { RolesDecorator } from 'src/decorators/role_decorator';
+// import { Role } from 'src/constants/role.enum';
+// import { RolesGuard } from 'src/guards/role.guard';
 
 @Controller('api/categories')
 export class CategoryController {
@@ -28,7 +29,7 @@ export class CategoryController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string) {
+  async findById(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoryService.findByCategoryById(id);
   }
 
@@ -43,7 +44,7 @@ export class CategoryController {
   // @RolesDecorator(Role.ADMIN)
   // @UseGuards(JwtAuthGuard, RolesGuard)
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCategoryDto: UpdateCategoryRequestDto,
   ) {
     return this.categoryService.updateCategory(id, updateCategoryDto);
@@ -52,7 +53,7 @@ export class CategoryController {
   @Delete(':id')
   // @RolesDecorator(Role.ADMIN)
   // @UseGuards(JwtAuthGuard, RolesGuard)
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoryService.deleteCategory(id);
   }
 }

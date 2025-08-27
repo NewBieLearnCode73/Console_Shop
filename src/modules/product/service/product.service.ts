@@ -15,7 +15,7 @@ import {
   UpdateProductStatusRequestDto,
 } from '../dto/request/product-request.dto';
 import { Category } from '../entity/category.entity';
-import { generateSlugByName } from 'src/utils/main_helper';
+import { generateSlug } from 'src/utils/main_helper';
 import { Brand } from '../entity/brand.entity';
 @Injectable()
 export class ProductService {
@@ -111,7 +111,7 @@ export class ProductService {
       throw new BadRequestException('Invalid UUID for category or brand');
     }
 
-    product.slug = generateSlugByName(product.name);
+    product.slug = generateSlug(product.name);
 
     const category = await this.categoryRepository.findOne({
       where: { id: createProductRequestDto.category_id },

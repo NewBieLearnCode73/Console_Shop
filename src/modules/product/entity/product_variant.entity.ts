@@ -12,32 +12,23 @@ import { Product } from './product.entity';
 import { ProductImage } from './product_image.entity';
 import { Stock } from './stock.entity';
 import { DigitalKey } from './digital_key.entity';
-import { SeoType } from 'src/interfaces/seo_type';
 
 @Entity()
-export class ProductVariant
-  extends AbstractEntity<ProductVariant>
-  implements SeoType
-{
+export class ProductVariant extends AbstractEntity<ProductVariant> {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ nullable: false, unique: true })
+  variant_name: string;
+
+  @Column({ nullable: true, unique: true })
+  slug: string;
 
   @Column({ nullable: false, unique: true })
   sku: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
-
-  // SEO fields start
-  @Column({ nullable: false, unique: true })
-  slug: string;
-
-  @Column({ nullable: false })
-  seo_title?: string;
-
-  @Column({ nullable: false })
-  seo_description?: string;
-  // SEO fields end
 
   @Column({
     nullable: false,
@@ -48,8 +39,8 @@ export class ProductVariant
   })
   discount: number;
 
-  @Column({ nullable: false })
-  color: string;
+  @Column({ nullable: true })
+  color?: string;
 
   @Column({ type: 'jsonb', nullable: true })
   other_attributes: Record<string, any>;

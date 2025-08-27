@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateCategoryRequestDto {
   @IsNotEmpty()
@@ -21,8 +28,9 @@ export class CreateCategoryRequestDto {
   @MaxLength(500)
   seo_description?: string;
 
+  @IsUUID()
   @IsOptional()
-  @IsString()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   parent_id?: string;
 }
 
@@ -49,5 +57,6 @@ export class UpdateCategoryRequestDto {
 
   @IsOptional()
   @IsString()
+  @IsUUID()
   parent_id?: string;
 }

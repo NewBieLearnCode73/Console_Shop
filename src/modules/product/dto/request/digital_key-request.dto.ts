@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
 export class CreateDigitalKeyRequestDto {
   @IsString()
@@ -6,6 +6,7 @@ export class CreateDigitalKeyRequestDto {
   key_code: string;
 
   @IsNotEmpty()
+  @IsUUID()
   product_variant_id: string;
 }
 
@@ -15,5 +16,6 @@ export class UpdateDigitalKeyRequestDto {
   key_code: string;
 
   @IsNotEmpty()
+  @IsUUID()
   product_variant_id: string;
 }

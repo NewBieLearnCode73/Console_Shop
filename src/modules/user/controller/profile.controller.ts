@@ -12,7 +12,7 @@ import {
 import { ProfileService } from '../service/profile.service';
 import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   CreateProfileRequestDto,
   UpdateProfileRequestDto,

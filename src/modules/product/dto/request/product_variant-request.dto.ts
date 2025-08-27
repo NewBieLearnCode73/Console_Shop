@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsString,
   IsNumber,
@@ -6,108 +7,105 @@ import {
   Min,
   IsObject,
   IsArray,
+  IsNotEmpty,
+  IsInstance,
+  IsUrl,
 } from 'class-validator';
 
 export class CreateProductVariantDto {
   @IsUUID()
+  @IsNotEmpty()
   product_id: string;
 
+  @IsNotEmpty()
   @IsString()
+  variant_name: string;
+
+  @IsString()
+  @IsNotEmpty()
   sku: string;
 
+  @Transform(({ value }) => parseFloat(value))
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @IsNotEmpty()
   price: number;
 
-  @IsOptional()
-  @IsString()
-  seo_title?: string;
-
-  @IsOptional()
-  @IsString()
-  seo_description?: string;
-
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
   discount?: number;
 
-  @IsOptional()
-  @IsString()
-  color?: string;
-
-  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? JSON.parse(value) : value,
+  )
+  @IsNotEmpty()
   @IsObject()
-  other_attributes?: Record<string, any>;
-
-  @IsOptional()
-  main_image?: Express.Multer.File;
-
-  @IsOptional()
-  @IsArray()
-  galary_image?: Express.Multer.File[];
+  other_attributes: Record<string, any>;
 }
 
 // DTO for Physical variants (DEVICE, CARD_PHYSICAL)
 export class CreatePhysicalVariantDto extends CreateProductVariantDto {
+  @IsNotEmpty()
+  @IsString()
+  color?: string;
+
+  @Transform(({ value }) => parseInt(value))
   @IsNumber()
   @Min(0)
   quantity: number;
 }
 
-// DTO for Digital variants (CARD_DIGITAL_KEY)
-export class CreateDigitalVariantDto extends CreateProductVariantDto {
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  quantity?: number;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  digital_keys?: string[];
-}
-
-// Add more digital keys
-export class AddMoreDigitalKeysRequestDto {
-  @IsArray()
-  @IsString({ each: true })
-  digital_keys: string[];
-}
-
-export class UpdateProductVariantDto {
-  @IsOptional()
+export class UpdateVariantDto {
+  @IsNotEmpty()
   @IsString()
-  sku?: string;
+  variant_name: string;
 
-  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  slug: string;
+
+  @IsNotEmpty()
+  @IsString()
+  sku: string;
+
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
+  @IsNotEmpty()
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  price?: number;
+  price: number;
 
-  @IsOptional()
-  @IsString()
-  seo_title?: string;
-
-  @IsOptional()
-  @IsString()
-  seo_description?: string;
-
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
-  discount?: number;
+  discount: number;
 
   @IsOptional()
   @IsString()
-  color?: string;
+  color: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsObject()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? JSON.parse(value) : value,
+  )
   other_attributes?: Record<string, any>;
+}
 
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  quantity?: number;
+export class ListKeepUrlImagesRequestDto {
+  @IsArray()
+  @IsNotEmpty()
+  @IsUrl({}, { each: true })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [];
+      }
+    }
+    return value;
+  })
+  keep_images: string[];
 }

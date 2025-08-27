@@ -15,6 +15,9 @@ export class DigitalKey extends AbstractEntity<DigitalKey> {
   id: string;
 
   @Column({ nullable: false, unique: true })
+  hash_key_code: string;
+
+  @Column({ nullable: false, unique: true })
   key_code: string;
 
   @Column({
