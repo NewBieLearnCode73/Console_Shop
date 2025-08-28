@@ -41,6 +41,7 @@ import { validateLoginDtoMiddleware } from 'src/middlewares/validatedto.middlewa
     CustomGoogleStrategy,
     CustomFacebookStrategy,
     validateLoginDtoMiddleware,
+    ConfigModule,
   ],
   exports: [AuthService],
 })

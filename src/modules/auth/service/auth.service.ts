@@ -10,6 +10,12 @@ import { DataSource, Repository } from 'typeorm';
 import bcrypt from 'bcrypt';
 import { JwtPayload } from 'src/interfaces/payload';
 import { registerRequestDto } from '../dto/request/auth-request.dto';
+import Redis from 'ioredis';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
+import { config } from 'dotenv';
+import { sendMailResetPassword } from 'src/utils/brevo_helper';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +24,9 @@ export class AuthService {
     private readonly dataSource: DataSource,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly configService: ConfigService,
+    @InjectRedis()
+    private readonly redis: Redis,
   ) {}
 
   async hashPassword(password: string) {
@@ -88,5 +97,69 @@ export class AuthService {
     });
 
     await this.userRepository.save(newUser);
+  }
+
+  async genTokenRedisResetPassword(email: string) {
+    // RESET:TOKEN:EMAIL
+    await this.redis.del(`RESET:${email}`);
+
+    const activeCode = crypto.randomBytes(32).toString('hex');
+    await this.redis.set(`RESET:${email}`, activeCode, 'EX', 60 * 60);
+    return activeCode;
+  }
+
+  async generateResetLink(email: string) {
+    const existedEmail = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (!existedEmail) {
+      throw new UnauthorizedException('Email not found.');
+    }
+
+    const activeCode = await this.genTokenRedisResetPassword(email);
+    const serverHost = this.configService.get<string>('SERVER_HOST');
+    const serverPort = this.configService.get<string>('SERVER_PORT');
+
+    const FEURL = `${serverHost}:${serverPort}`;
+    return `${FEURL}/api/auth/reset-password-verify?email=${email}&code=${activeCode}`;
+  }
+
+  async sendResetPasswordEmail(email: string, name: string) {
+    const resetLink = await this.generateResetLink(email);
+
+    // Send email
+    await sendMailResetPassword(email, name, resetLink);
+  }
+
+  async checkResetCode(email: string, code: string) {
+    const storedCode = await this.redis.get(`RESET:${email}`);
+    if (!storedCode) {
+      throw new UnauthorizedException('Invalid or expired reset code.');
+    }
+
+    if (storedCode !== code) {
+      throw new UnauthorizedException('Invalid reset code.');
+    }
+
+    await this.redis.del(`RESET:${email}`);
+
+    return true;
+  }
+
+  async changePassword(email: string, code: string, newPassword: string) {
+    const isValid = await this.checkResetCode(email, code);
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid or expired reset code.');
+    }
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    const hashedPassword = await this.hashPassword(newPassword);
+    user.password = hashedPassword;
+
+    await this.userRepository.save(user);
   }
 }
