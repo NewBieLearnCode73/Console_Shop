@@ -101,10 +101,6 @@ export class ProfileService {
       throw new NotFoundException('Profile not found');
     }
 
-    if (profile.avatar_url) {
-      await this.deleteUserAvatar(userId);
-    }
-
     try {
       const avatarUrl = await this.supabaseService.uploadUserAvatar(
         file,
@@ -116,15 +112,6 @@ export class ProfileService {
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException('Upload avatar failed');
-    }
-  }
-
-  // Delete user avatar
-  async deleteUserAvatar(userId: string) {
-    try {
-      return await this.supabaseService.deleteUserAvatar(userId);
-    } catch (error) {
-      throw new InternalServerErrorException('Delete avatar failed');
     }
   }
 }

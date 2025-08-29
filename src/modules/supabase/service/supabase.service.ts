@@ -17,22 +17,6 @@ export class SupabaseService {
     return this.configService.getOrThrow('SUPABASE_BASE_STORAGE_URL');
   }
 
-  async deleteUserAvatar(userId: string) {
-    const { data, error } = await this.supabaseClient.storage
-      .from('user_avatar')
-      .list(userId);
-
-    if (error) {
-      throw new InternalServerErrorException(
-        'Some thing was wrong with user image!',
-      );
-    }
-
-    const pathFile = `${userId}/${data?.[0]?.name}`;
-
-    await this.supabaseClient.storage.from('user_avatar').remove([pathFile]);
-  }
-
   async uploadUserAvatar(file: Express.Multer.File, userId: string) {
     const allowedMimeTypes = [
       'image/jpeg',
@@ -46,7 +30,7 @@ export class SupabaseService {
       );
     }
 
-    const newFileName = `${userId}/${Date.now()}`;
+    const newFileName = `${userId}/${userId}_main`;
 
     const { data: uploadData, error } = await this.supabaseClient.storage
       .from('user_avatar')
