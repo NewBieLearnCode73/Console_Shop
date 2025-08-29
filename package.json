@@ -34,6 +34,7 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/throttler": "^6.4.0",
     "@nestjs/typeorm": "^11.0.0",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.11.0",

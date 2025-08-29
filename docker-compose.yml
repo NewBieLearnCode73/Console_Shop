@@ -27,6 +27,7 @@ services:
 
   kafka:
     image: bitnami/kafka:3.7
+    restart: always
     container_name: console_shop_kafka
     ports:
       - '9092:9092'
@@ -48,6 +49,7 @@ services:
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
+    restart: always
     container_name: console_shop_kafka_ui
     depends_on:
       - kafka

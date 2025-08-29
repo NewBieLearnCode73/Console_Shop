@@ -9,13 +9,19 @@ import { User } from 'src/modules/user/entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import bcrypt from 'bcrypt';
 import { JwtPayload } from 'src/interfaces/payload';
-import { registerRequestDto } from '../dto/request/auth-request.dto';
+import {
+  ActiveAccountRequestDto,
+  registerRequestDto,
+} from '../dto/request/auth-request.dto';
 import Redis from 'ioredis';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
-import { sendMailResetPassword } from 'src/utils/brevo_helper';
+import {
+  sendMailResetPassword,
+  sendMailActiveAccount,
+} from 'src/utils/brevo_helper';
 
 @Injectable()
 export class AuthService {
@@ -80,6 +86,7 @@ export class AuthService {
     };
   }
 
+  // REGISTER ACCOUNT
   async register(registerRequestDto: registerRequestDto) {
     const userExists = await this.userRepository.findOne({
       where: { email: registerRequestDto.email },
@@ -99,8 +106,59 @@ export class AuthService {
     await this.userRepository.save(newUser);
   }
 
+  // ACTIVE ACCOUNT
+  async genTokenRedisActiveAccount(email: string) {
+    // ACTIVE:EMAIL
+    await this.redis.del(`ACTIVE:${email}`);
+
+    const activeCode = crypto.randomBytes(32).toString('hex');
+    await this.redis.set(`ACTIVE:${email}`, activeCode, 'EX', 60 * 60 * 24);
+    return activeCode;
+  }
+
+  async generateActiveLink(email: string) {
+    const activeCode = await this.genTokenRedisActiveAccount(email);
+    const serverHost = this.configService.get<string>('SERVER_HOST');
+    const serverPort = this.configService.get<string>('SERVER_PORT');
+
+    const FEURL = `${serverHost}:${serverPort}`;
+    return `${FEURL}/api/auth/active-account-verify?email=${email}&code=${activeCode}`;
+  }
+
+  async sendActiveAccountEmail(email: string, name: string) {
+    const user = await this.userRepository.findOne({
+      where: { email, is_active: false },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found or already activated.');
+    }
+
+    const activeLink = await this.generateActiveLink(email);
+
+    await sendMailActiveAccount(email, name, activeLink);
+  }
+
+  async checkActiveCode(email: string, code: string) {
+    const storedCode = await this.redis.get(`ACTIVE:${email}`);
+    if (!storedCode) {
+      throw new UnauthorizedException('Invalid or expired activation code.');
+    }
+
+    if (storedCode !== code) {
+      throw new UnauthorizedException('Invalid activation code.');
+    }
+
+    await this.userRepository.update({ email }, { is_active: true });
+
+    await this.redis.del(`ACTIVE:${email}`);
+
+    return true;
+  }
+
+  // RESET PASSWORD
   async genTokenRedisResetPassword(email: string) {
-    // RESET:TOKEN:EMAIL
+    // RESET:EMAIL
     await this.redis.del(`RESET:${email}`);
 
     const activeCode = crypto.randomBytes(32).toString('hex');

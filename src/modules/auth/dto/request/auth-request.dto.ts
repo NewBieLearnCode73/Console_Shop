@@ -28,3 +28,9 @@ export class ChangePasswordDto {
   @Length(6, 20)
   newPassword: string;
 }
+
+export class ActiveAccountRequestDto {
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+}

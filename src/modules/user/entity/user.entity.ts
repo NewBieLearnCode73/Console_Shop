@@ -32,10 +32,6 @@ export class User extends AbstractEntity<User> {
   @Column({ default: false })
   is_active: boolean;
 
-  @Column()
-  @Generated('uuid')
-  active_code: string;
-
   @OneToOne(() => Profile, (profile) => profile.user)
   profile: Profile;
 
