@@ -23,7 +23,9 @@
     "migration:run": "npm run typeorm -- migration:run -d typeorm.config.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d typeorm.config.ts",
     "migration:run:prod": "npx typeorm migration:run -d dist/typeorm.config.js",
-    "migration:revert:prod": "npx typeorm migration:revert -d dist/typeorm.config.js"
+    "migration:revert:prod": "npx typeorm migration:revert -d dist/typeorm.config.js",
+    "seed": "ts-node -r tsconfig-paths/register seed/index.ts",
+    "commit": "cz"
   },
   "dependencies": {
     "@nestjs-modules/ioredis": "^2.0.2",
@@ -34,6 +36,7 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.0",
     "@nestjs/throttler": "^6.4.0",
     "@nestjs/typeorm": "^11.0.0",
     "@supabase/supabase-js": "^2.55.0",
@@ -56,8 +59,13 @@
     "typeorm": "^0.3.25"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/cz-commitlint": "^19.8.1",
+    "@commitlint/prompt-cli": "^19.8.1",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
+    "@faker-js/faker": "^10.0.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
@@ -73,6 +81,8 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
     "@types/supertest": "^6.0.2",
+    "commitizen": "^4.3.1",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -104,5 +114,25 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "config": {
+    "commitizen": {
+      "path": "@commitlint/cz-commitlint"
+    }
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "conventionalcommits"
+        }
+      ],
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/github"
+    ]
   }
 }

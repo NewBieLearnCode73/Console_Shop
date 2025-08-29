@@ -57,6 +57,88 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## 📦 Seed Data
+
+Dự án hỗ trợ **seed data** (tạo dữ liệu mẫu) để phục vụ phát triển và test nhanh chóng.
+Tất cả file seed nằm trong thư mục `seed/` và được gọi qua lệnh `npm run seed`.
+
+---
+
+### 🚀 Cách chạy seed
+
+Cú pháp chung:
+
+```bash
+npm run seed <target> [amount] [clear]
+```
+
+* `<target>`: tên file seed (ví dụ: `user`, `address`, `profile`).
+* `[amount]`: số lượng record muốn tạo (mặc định: `10`, có thể bỏ qua với seed không cần).
+* `[clear]`: nếu truyền vào thì sẽ xoá dữ liệu cũ trước khi seed.
+
+---
+
+### 📝 Ví dụ cụ thể
+
+#### 1. Seed User
+
+Tạo 20 user mới, xoá dữ liệu cũ trước khi tạo:
+
+```bash
+npm run seed user 20 clear
+```
+
+Nếu chỉ muốn thêm 5 user mới, không xoá dữ liệu cũ:
+
+```bash
+npm run seed user 5
+```
+
+---
+
+#### 2. Seed Address
+
+Seed địa chỉ cho user.
+
+* Nhận tham số `amount` (số lượng địa chỉ muốn tạo).
+* Có thể truyền `clear` để xoá dữ liệu cũ.
+
+Ví dụ:
+
+```bash
+npm run seed address 15 clear
+```
+
+---
+
+#### 3. Seed Profile
+
+Khác với `user` và `address`, seed `profile` **không cần amount**.
+
+* Khi chạy, script sẽ duyệt toàn bộ `user` trong DB.
+* Nếu user chưa có `profile`, sẽ tự động tạo mới.
+* Nếu có tham số `clear`, toàn bộ profile cũ sẽ bị xoá và tạo lại từ đầu.
+
+Ví dụ:
+
+```bash
+npm run seed profile clear
+```
+
+Hoặc chỉ tạo profile cho user chưa có mà không xoá dữ liệu cũ:
+
+```bash
+npm run seed profile
+```
+
+---
+
+### ⚡ Notes
+
+* Khi sử dụng `clear`, dữ liệu bảng đó sẽ bị xoá hoàn toàn (tương đương `TRUNCATE`).
+* Chạy seed nhiều lần có thể tạo dữ liệu trùng (trừ khi dùng `clear`).
+* Nên seed `user` trước rồi mới seed `address` hoặc `profile` (vì có ràng buộc quan hệ FK).
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
