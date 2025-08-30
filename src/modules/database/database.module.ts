@@ -31,7 +31,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       }),
     }),
   ],
-
   exports: [TypeOrmModule, RedisModule],
 })
 export class DatabaseModule {}

@@ -9,15 +9,11 @@ import { User } from 'src/modules/user/entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import bcrypt from 'bcrypt';
 import { JwtPayload } from 'src/interfaces/payload';
-import {
-  ActiveAccountRequestDto,
-  registerRequestDto,
-} from '../dto/request/auth-request.dto';
+import { registerRequestDto } from '../dto/request/auth-request.dto';
 import Redis from 'ioredis';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
-import { config } from 'dotenv';
 import {
   sendMailResetPassword,
   sendMailActiveAccount,
@@ -34,6 +30,180 @@ export class AuthService {
     @InjectRedis()
     private readonly redis: Redis,
   ) {}
+
+  getTTLToken(token: string): number {
+    try {
+      if (!token) return 0;
+
+      const decodeToken = this.jwtService.decode(token) as JwtPayload & {
+        exp?: number;
+      };
+
+      if (!decodeToken?.exp) return 0;
+
+      const currentTime = Math.floor(Date.now() / 1000);
+      return Math.max(0, decodeToken.exp - currentTime);
+    } catch {
+      return 0;
+    }
+  }
+
+  async pushAccessTokenToBlackList(token: string, userId: string, ttl: number) {
+    await this.redis.set(`BLACKLIST:ACCESS:${token}`, userId, 'EX', ttl);
+  }
+
+  async pushRefreshTokenToBlackList(
+    token: string,
+    userId: string,
+    ttl: number,
+  ) {
+    await this.redis.set(`BLACKLIST:REFRESH:${token}`, userId, 'EX', ttl);
+  }
+
+  async addAccessTokensToZSet(
+    userId: string,
+    accessToken: string,
+    ttl: number,
+    limit = 3,
+  ) {
+    const now = Math.floor(Date.now() / 1000);
+    const expiry = now + ttl;
+
+    // Clean up expired tokens
+    await this.redis.zremrangebyscore(
+      `USER_ACCESS_TOKENS_SET:${userId}`,
+      0,
+      now,
+    );
+    await this.redis.zadd(
+      `USER_ACCESS_TOKENS_SET:${userId}`,
+      expiry,
+      accessToken,
+    );
+
+    // Check limit
+    const tokenCount = await this.redis.zcard(
+      `USER_ACCESS_TOKENS_SET:${userId}`,
+    );
+    if (tokenCount > limit) {
+      // Get oldest token (Smallest score) __ GET AND REMOVE IN 1 TIME
+      const [oldestToken, expiry] = await this.redis.zpopmin(
+        `USER_ACCESS_TOKENS_SET:${userId}`,
+      );
+
+      if (oldestToken) {
+        const remainingTTL = this.getTTLToken(oldestToken);
+
+        await this.pushAccessTokenToBlackList(
+          oldestToken,
+          userId,
+          remainingTTL,
+        );
+
+        await this.redis.del(`ACCESS_TOKEN:${oldestToken}`);
+      }
+    }
+  }
+
+  async addRefreshTokensToZSet(
+    userId: string,
+    refreshToken: string,
+    ttl: number,
+    limit = 3,
+  ) {
+    const now = Math.floor(Date.now() / 1000);
+    const expiry = now + ttl;
+
+    // Clean up expired tokens
+    await this.redis.zremrangebyscore(
+      `USER_REFRESH_TOKENS_SET:${userId}`,
+      0,
+      now,
+    );
+    await this.redis.zadd(
+      `USER_REFRESH_TOKENS_SET:${userId}`,
+      expiry,
+      refreshToken,
+    );
+
+    // Check limit
+    const tokenCount = await this.redis.zcard(
+      `USER_REFRESH_TOKENS_SET:${userId}`,
+    );
+    if (tokenCount > limit) {
+      // Remove oldest token (Smallest score) __ GET AND REMOVE IN 1 TIME
+      const [oldestToken, expiry] = await this.redis.zpopmin(
+        `USER_REFRESH_TOKENS_SET:${userId}`,
+      );
+
+      if (oldestToken) {
+        const remainingTTL = this.getTTLToken(oldestToken);
+
+        await this.pushRefreshTokenToBlackList(
+          oldestToken,
+          userId,
+          remainingTTL,
+        );
+
+        await this.redis.del(`REFRESH_TOKEN:${oldestToken}`);
+      }
+    }
+  }
+
+  async deleteAccessTokenFromZset(userId: string, accessToken: string) {
+    await this.redis.zrem(`USER_ACCESS_TOKENS_SET:${userId}`, accessToken);
+  }
+
+  async deleteRefreshTokenFromZset(userId: string, refreshToken: string) {
+    await this.redis.zrem(`USER_REFRESH_TOKENS_SET:${userId}`, refreshToken);
+  }
+
+  async saveAccessToken(userId: string, accessToken: string) {
+    const ttl = this.getTTLToken(accessToken);
+    await this.redis.set(`ACCESS_TOKEN:${accessToken}`, userId, 'EX', ttl);
+    await this.addAccessTokensToZSet(userId, accessToken, ttl);
+  }
+
+  async saveRefreshToken(userId: string, refreshToken: string) {
+    const ttl = this.getTTLToken(refreshToken);
+    await this.redis.set(`REFRESH_TOKEN:${refreshToken}`, userId, 'EX', ttl);
+    await this.addRefreshTokensToZSet(userId, refreshToken, ttl);
+  }
+
+  // Provide a new access token and refresh token pair
+  async provideTokenPair(refreshToken: string) {
+    // Check in black list
+    const isBlacklisted = await this.redis.get(
+      `BLACKLIST:REFRESH:${refreshToken}`,
+    );
+    if (isBlacklisted)
+      throw new UnauthorizedException('Refresh token is blacklisted');
+
+    const userId = await this.redis.get(`REFRESH_TOKEN:${refreshToken}`);
+    if (!userId) throw new UnauthorizedException('Invalid refresh token');
+
+    const newAccessToken = this.jwtService.sign(
+      { id: userId },
+      { expiresIn: '7d' },
+    );
+    const newRefreshToken = this.jwtService.sign(
+      { id: userId },
+      { expiresIn: '14d' },
+    );
+
+    const ttl = this.getTTLToken(refreshToken);
+    if (ttl > 0) {
+      await this.pushRefreshTokenToBlackList(refreshToken, userId, ttl);
+    }
+
+    await this.redis.del(`REFRESH_TOKEN:${refreshToken}`);
+    await this.redis.zrem(`USER_REFRESH_TOKENS_SET:${userId}`, refreshToken);
+
+    await this.saveAccessToken(userId, newAccessToken);
+    await this.saveRefreshToken(userId, newRefreshToken);
+
+    return { access_token: newAccessToken, refresh_token: newRefreshToken };
+  }
 
   async hashPassword(password: string) {
     const salt = await bcrypt.genSalt(10);
@@ -73,17 +243,40 @@ export class AuthService {
     return user;
   }
 
-  login(user: User) {
+  async login(user: User) {
     const payload: JwtPayload = {
       email: user.email,
       id: user.id,
       role: user.role,
     };
+    const access_token = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const refresh_token = this.jwtService.sign(payload, { expiresIn: '14d' });
+
+    await this.saveAccessToken(user.id, access_token);
+    await this.saveRefreshToken(user.id, refresh_token);
 
     return {
-      access_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '14d' }),
+      access_token,
+      refresh_token,
     };
+  }
+
+  async logout(accessToken: string, refreshToken: string, userId: string) {
+    const accessTokenTtl = this.getTTLToken(accessToken);
+    const refreshTokenTtl = this.getTTLToken(refreshToken);
+
+    await this.pushAccessTokenToBlackList(accessToken, userId, accessTokenTtl);
+    await this.pushRefreshTokenToBlackList(
+      refreshToken,
+      userId,
+      refreshTokenTtl,
+    );
+
+    await this.deleteAccessTokenFromZset(userId, accessToken);
+    await this.deleteRefreshTokenFromZset(userId, refreshToken);
+
+    await this.redis.del(`ACCESS_TOKEN:${accessToken}`);
+    await this.redis.del(`REFRESH_TOKEN:${refreshToken}`);
   }
 
   // REGISTER ACCOUNT
