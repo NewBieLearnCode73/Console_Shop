@@ -4,6 +4,8 @@ export class DefaultAddressResponseDto {
   @Expose()
   id: string;
   @Expose()
+  is_default: string;
+  @Expose()
   to_name: string;
   @Expose()
   to_phone: string;

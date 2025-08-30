@@ -10,6 +10,7 @@ import { User } from '../entity/user.entity';
 import { Profile } from '../entity/profile.entity';
 import { isUUID } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
+import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
 import {
   CreateAddressRequestDto,
   UpdateAddressRequestDto,
@@ -18,6 +19,7 @@ import {
   CreateAddressResponseDto,
   DefaultAddressResponseDto,
 } from '../dto/response/address-response.dto';
+import { PaginationResult } from 'src/utils/pagination/pagination_result';
 
 @Injectable()
 export class AddressService {
@@ -76,17 +78,65 @@ export class AddressService {
     });
   }
 
-  async getAllAdressByUserId(userId: string) {
+  async getAllAdressByUserId(
+    userId: string,
+    paginationRequestDto: PaginationRequestDto,
+  ) {
     if (!isUUID(userId)) {
       throw new BadRequestException('UUID is not accepted!');
     }
 
-    const listAddress = await this.addressRepository.find();
+    const page = paginationRequestDto.page ?? 1;
+    const limit = paginationRequestDto.limit ?? 10;
 
-    return listAddress.map((x) =>
+    const [listAddress, total] = await this.addressRepository.findAndCount({
+      where: { user: { id: userId } },
+      take: limit,
+      skip: (page - 1) * limit,
+      order: { is_default: 'DESC' },
+    });
+
+    const response = listAddress.map((x) =>
       plainToInstance(DefaultAddressResponseDto, x, {
         excludeExtraneousValues: true,
       }),
+    );
+
+    return PaginationResult<DefaultAddressResponseDto>(
+      response,
+      total,
+      page,
+      limit,
+    );
+  }
+
+  async setDefaultAddress(userId: string, addressId: string) {
+    if (!isUUID(userId) || !isUUID(addressId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
+    const existAddress = await this.addressRepository.findOne({
+      where: { id: addressId, user: { id: userId } },
+    });
+
+    if (!existAddress) {
+      throw new NotFoundException(`Address with id ${addressId} is not found!`);
+    }
+
+    const prevDefault = await this.addressRepository.findOne({
+      where: { is_default: true, user: { id: userId } },
+    });
+
+    if (prevDefault) {
+      await this.addressRepository.update(
+        { id: prevDefault.id },
+        { is_default: false },
+      );
+    }
+
+    await this.addressRepository.update(
+      { id: addressId },
+      { is_default: true },
     );
   }
 
