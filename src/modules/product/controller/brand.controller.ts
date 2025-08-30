@@ -7,20 +7,22 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { BrandService } from '../service/brand.service';
 import {
   CreateBrandRequestDto,
   UpdateBrandRequestDto,
 } from '../dto/request/brand-request.dto';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 
 @Controller('api/brands')
 export class BrandController {
   constructor(private readonly brandService: BrandService) {}
 
   @Get()
-  async findAll() {
-    return this.brandService.findAllBrands();
+  async findAll(@Query() paginationRequestDto: PaginationRequestDto) {
+    return this.brandService.findAllBrands(paginationRequestDto);
   }
 
   @Get(':id')

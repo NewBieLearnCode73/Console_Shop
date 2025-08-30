@@ -8,21 +8,35 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { ProductService } from '../service/product.service';
 import {
   CreateProductRequestDto,
+  SearchProductRequestDto,
   UpdateProductRequestDto,
   UpdateProductStatusRequestDto,
 } from '../dto/request/product-request.dto';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 
 @Controller('api/products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Get()
-  async findAllProducts() {
-    return this.productService.findAll();
+  async findAllProducts(@Query() paginationRequestDto: PaginationRequestDto) {
+    return this.productService.findAll(paginationRequestDto);
+  }
+
+  @Get('search')
+  async searchProductToGetVariants(
+    @Query() searchProductRequestDto: SearchProductRequestDto,
+    @Query() paginationRequestDto: PaginationRequestDto,
+  ) {
+    return this.productService.searchProductToGetVariants(
+      searchProductRequestDto,
+      paginationRequestDto,
+    );
   }
 
   @Get(':id')

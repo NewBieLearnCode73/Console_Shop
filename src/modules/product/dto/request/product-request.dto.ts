@@ -1,4 +1,10 @@
-import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { ProductStatus } from 'src/constants/product_status.enum';
 import { ProductType } from 'src/constants/product_type.enum';
 
@@ -57,4 +63,14 @@ export class UpdateProductStatusRequestDto {
   @IsNotEmpty()
   @IsEnum(ProductStatus)
   status: ProductStatus;
+}
+
+export class SearchProductRequestDto {
+  @IsString()
+  @IsOptional()
+  categorySlug?: string;
+
+  @IsString()
+  @IsOptional()
+  brandSlug?: string;
 }

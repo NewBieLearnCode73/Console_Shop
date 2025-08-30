@@ -6,11 +6,11 @@ export class PaginationRequestDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  page: number;
+  page: number = 1;
 
   @Transform(({ value }) => parseInt(value))
   @IsOptional()
   @IsInt()
   @Min(1)
-  limit: number;
+  limit: number = 10;
 }

@@ -9,6 +9,9 @@ import { User } from '../entity/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Role } from 'src/constants/role.enum';
 import { isUUID } from 'class-validator';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
+import { PaginationResult } from 'src/utils/pagination/pagination_result';
+import { UserWithProfileResponseDto } from '../dto/response/user-response.dto';
 
 @Injectable()
 export class UserService {
@@ -42,8 +45,11 @@ export class UserService {
     return user;
   }
 
-  async findAllUserWithProfile() {
-    return await this.userRepository.find({
+  async findAllUserWithProfile(paginationRequestDto: PaginationRequestDto) {
+    const page = paginationRequestDto.page;
+    const limit = paginationRequestDto.limit;
+
+    const [response, total] = await this.userRepository.findAndCount({
       relations: ['profile'],
       select: {
         id: true,
@@ -54,11 +60,20 @@ export class UserService {
           avatar_url: true,
         },
       },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return PaginationResult(response, total, page, limit);
   }
 
-  async findAllUserIsCustomerWithProfile() {
-    return await this.userRepository.find({
+  async findAllUserIsCustomerWithProfile(
+    paginationRequestDto: PaginationRequestDto,
+  ) {
+    const page = paginationRequestDto.page;
+    const limit = paginationRequestDto.limit;
+
+    const [response, total] = await this.userRepository.findAndCount({
       relations: ['profile'],
       select: {
         id: true,
@@ -70,7 +85,16 @@ export class UserService {
         },
       },
       where: { role: Role.CUSTOMER },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return PaginationResult<UserWithProfileResponseDto>(
+      response,
+      total,
+      page,
+      limit,
+    );
   }
 
   async findUserIsCustomerWithProfile(userId: string) {
