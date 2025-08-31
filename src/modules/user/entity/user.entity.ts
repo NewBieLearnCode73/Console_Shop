@@ -3,13 +3,13 @@ import { Role } from 'src/constants/role.enum';
 import {
   Column,
   Entity,
-  Generated,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Profile } from './profile.entity';
 import { Address } from './address.entity';
+import { Cart } from 'src/modules/cart/entity/cart.entity';
 
 @Entity()
 export class User extends AbstractEntity<User> {
@@ -37,4 +37,7 @@ export class User extends AbstractEntity<User> {
 
   @OneToMany(() => Address, (address) => address.user)
   addresses: Address[];
+
+  @OneToOne(() => Cart, (cart) => cart.user, { cascade: true })
+  cart: Cart;
 }

@@ -18,7 +18,6 @@ import { ProductVariantService } from '../service/product_variant.service';
 import {
   CreateProductVariantDto,
   ListKeepUrlImagesRequestDto,
-  SearchProductVariantByCategoryAndBrandRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import {
   CreatePhysicalVariantDto,
