@@ -19,10 +19,10 @@ export class Order extends AbstractEntity<Order> {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ nullable: true })
   order_code: string; // Đơn vị vận chuyển cung cấp
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   client_order_code: string; // Mã đơn hàng nội bộ
 
   @Column()

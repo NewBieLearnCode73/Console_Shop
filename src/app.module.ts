@@ -24,6 +24,7 @@ import { KafkaModule } from './modules/kafka/kafka.module';
         ttl: 60 * 60 * 1000, // 1 hour
       },
     ]),
+
     AuthModule,
     UserModule,
     OrderModule,

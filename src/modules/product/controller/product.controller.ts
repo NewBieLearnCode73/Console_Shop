@@ -44,6 +44,11 @@ export class ProductController {
     return this.productService.findOne(id);
   }
 
+  @Get('/slug/:slug')
+  async findProductBySlug(@Param('slug') slug: string) {
+    return this.productService.findBySlug(slug);
+  }
+
   @Post()
   async createProduct(@Body() createProductDto: CreateProductRequestDto) {
     return this.productService.createProduct(createProductDto);

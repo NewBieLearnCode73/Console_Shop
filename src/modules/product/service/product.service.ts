@@ -25,6 +25,7 @@ import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
 import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { ProductVariantService } from './product_variant.service';
 import { S } from 'node_modules/@faker-js/faker/dist/airline-CHFQMWko';
+import { ProductVariant } from '../entity/product_variant.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -39,12 +40,15 @@ export class ProductService {
   ) {}
 
   async findAll(paginationRequestDto: PaginationRequestDto) {
-    const { page, limit } = paginationRequestDto;
+    const { page, limit, order, sortBy } = paginationRequestDto;
 
     const [response, total] = await this.productRepository.findAndCount({
       relations: ['category', 'brand'],
       skip: (page - 1) * limit,
       take: limit,
+      order: {
+        [sortBy]: order,
+      },
     });
 
     const products = response.map((product) =>
@@ -76,7 +80,7 @@ export class ProductService {
     });
 
     if (!product) {
-      return null;
+      throw new NotFoundException('Product not found');
     }
 
     return plainToInstance(ProductResponseDto, {
@@ -100,7 +104,7 @@ export class ProductService {
     });
 
     if (!product) {
-      return null;
+      throw new NotFoundException('Product not found');
     }
 
     return plainToInstance(ProductResponseDto, {
@@ -125,11 +129,11 @@ export class ProductService {
     const { page, limit } = paginationRequestDto;
 
     const queryBuilder = this.dataSource
-      .getRepository(Product)
-      .createQueryBuilder('product')
+      .getRepository(ProductVariant)
+      .createQueryBuilder('variant')
+      .leftJoinAndSelect('variant.product', 'product')
       .leftJoinAndSelect('product.category', 'category')
       .leftJoinAndSelect('product.brand', 'brand')
-      .leftJoinAndSelect('product.variants', 'variant')
       .leftJoinAndSelect('variant.images', 'images');
 
     if (categorySlug) {
@@ -142,23 +146,9 @@ export class ProductService {
 
     queryBuilder.skip((page - 1) * limit).take(limit);
 
-    const [products, total] = await queryBuilder.getManyAndCount();
+    const [variants, total] = await queryBuilder.getManyAndCount();
 
-    const productVariants = products.flatMap((product) =>
-      product.variants.map((variant) => ({
-        id: variant.id,
-        variant_name: variant.variant_name,
-        slug: variant.slug,
-        sku: variant.sku,
-        price: variant.price,
-        discount: variant.discount,
-        color: variant.color,
-        other_attributes: variant.other_attributes,
-        images: variant.images,
-      })),
-    );
-
-    return PaginationResult(productVariants, total, page, limit);
+    return PaginationResult(variants, total, page, limit);
   }
 
   async createProduct(createProductRequestDto: CreateProductRequestDto) {

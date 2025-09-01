@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class PaginationRequestDto {
   @Transform(({ value }) => parseInt(value))
@@ -12,5 +12,13 @@ export class PaginationRequestDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  limit: number = 10;
+  limit: number = 8;
+
+  @IsOptional()
+  @IsString()
+  sortBy: string = 'createdAt';
+
+  @IsOptional()
+  @IsIn(['ASC', 'DESC'])
+  order: 'ASC' | 'DESC' = 'DESC';
 }

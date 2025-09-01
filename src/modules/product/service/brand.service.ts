@@ -25,11 +25,14 @@ export class BrandService {
   ) {}
 
   async findAllBrands(paginationRequestDto: PaginationRequestDto) {
-    const { page, limit } = paginationRequestDto;
+    const { page, limit, sortBy, order } = paginationRequestDto;
 
     const [response, total] = await this.brandRepository.findAndCount({
       skip: (page - 1) * limit,
       take: limit,
+      order: {
+        [sortBy]: order,
+      },
     });
 
     const brands = plainToInstance(BrandResponseDto, response);
@@ -41,6 +44,14 @@ export class BrandService {
       throw new BadRequestException('Invalid brand ID');
     }
     const brand = await this.brandRepository.findOneBy({ id });
+    return plainToInstance(BrandResponseDto, brand);
+  }
+
+  async findBrandBySlug(slug: string) {
+    const brand = await this.brandRepository.findOneBy({ slug });
+    if (!brand) {
+      throw new NotFoundException('Brand not with slug "' + slug + '" found!');
+    }
     return plainToInstance(BrandResponseDto, brand);
   }
 

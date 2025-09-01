@@ -30,6 +30,11 @@ export class BrandController {
     return this.brandService.findBrandById(id);
   }
 
+  @Get('/slug/:slug')
+  async findBySlug(@Param('slug') slug: string) {
+    return await this.brandService.findBrandBySlug(slug);
+  }
+
   @Post()
   async create(@Body() createBrandRequestDto: CreateBrandRequestDto) {
     return this.brandService.createBrand(createBrandRequestDto);

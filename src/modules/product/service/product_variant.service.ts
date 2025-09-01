@@ -15,7 +15,6 @@ import { DigitalKey } from '../entity/digital_key.entity';
 import {
   CreatePhysicalVariantDto,
   CreateProductVariantDto,
-  SearchProductVariantByCategoryAndBrandRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import { SupabaseService } from '../../supabase/service/supabase.service';
 import { generateSlug, processCsvFile } from 'src/utils/main_helper';
@@ -26,8 +25,6 @@ import {
   ListKeepUrlImagesRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import { KeyGame } from 'src/interfaces/keygamge';
-import { SearchProductRequestDto } from '../dto/request/product-request.dto';
-import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 
 @Injectable()
 export class ProductVariantService {
@@ -49,6 +46,13 @@ export class ProductVariantService {
   async getVariantById(id: string) {
     return this.productVariantRepository.findOne({
       where: { id: id },
+      relations: ['product', 'stock', 'images'],
+    });
+  }
+
+  async getVariantBySlug(slug: string) {
+    return await this.productVariantRepository.findOne({
+      where: { slug: slug },
       relations: ['product', 'stock', 'images'],
     });
   }

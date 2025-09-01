@@ -86,14 +86,15 @@ export class AddressService {
       throw new BadRequestException('UUID is not accepted!');
     }
 
-    const page = paginationRequestDto.page ?? 1;
-    const limit = paginationRequestDto.limit ?? 10;
+    const { page, limit, order, sortBy } = paginationRequestDto;
 
     const [listAddress, total] = await this.addressRepository.findAndCount({
       where: { user: { id: userId } },
       take: limit,
       skip: (page - 1) * limit,
-      order: { is_default: 'DESC' },
+      order: {
+        [sortBy]: order,
+      },
     });
 
     const response = listAddress.map((x) =>

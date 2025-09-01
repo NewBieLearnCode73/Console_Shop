@@ -5,9 +5,23 @@ import { OrderAddress } from './entity/order_address.entity';
 import { OrderItem } from './entity/order_item.entity';
 import { OrderController } from './controller/oder.controller';
 import { OrderService } from './service/order.service';
+import { User } from '../user/entity/user.entity';
+import { ProductVariant } from '../product/entity/product_variant.entity';
+import { Stock } from '../product/entity/stock.entity';
+import { Address } from '../user/entity/address.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, OrderAddress, OrderItem])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Order,
+      OrderAddress,
+      OrderItem,
+      User,
+      ProductVariant,
+      Stock,
+      Address,
+    ]),
+  ],
   controllers: [OrderController],
   providers: [OrderService],
 })

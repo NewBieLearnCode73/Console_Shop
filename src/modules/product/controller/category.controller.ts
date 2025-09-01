@@ -35,6 +35,11 @@ export class CategoryController {
     return this.categoryService.findByCategoryById(id);
   }
 
+  @Get('/slug/:slug')
+  async findBySlug(@Param('slug') slug: string) {
+    return await this.categoryService.findByCategorySlug(slug);
+  }
+
   @Post()
   // @RolesDecorator(Role.ADMIN)
   // @UseGuards(JwtAuthGuard, RolesGuard)

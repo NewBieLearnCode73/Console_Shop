@@ -43,14 +43,29 @@ export class CategoryService {
     return plainToInstance(CategoryResponseDto, category);
   }
 
+  async findByCategorySlug(slug: string) {
+    const category = await this.categoryRepository.findOne({
+      where: { slug },
+      relations: ['children'],
+    });
+
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+    return plainToInstance(CategoryResponseDto, category);
+  }
+
   async findAllCategories(paginationRequestDto: PaginationRequestDto) {
-    const { page, limit } = paginationRequestDto;
+    const { page, limit, sortBy, order } = paginationRequestDto;
 
     const [categories, total] = await this.categoryRepository.findAndCount({
       where: { parent: IsNull() },
       relations: ['children'],
       skip: (page - 1) * limit,
       take: limit,
+      order: {
+        [sortBy]: order,
+      },
     });
 
     const response = plainToInstance(CategoryResponseDto, categories);

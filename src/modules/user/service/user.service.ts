@@ -46,8 +46,7 @@ export class UserService {
   }
 
   async findAllUserWithProfile(paginationRequestDto: PaginationRequestDto) {
-    const page = paginationRequestDto.page;
-    const limit = paginationRequestDto.limit;
+    const { page, limit, order, sortBy } = paginationRequestDto;
 
     const [response, total] = await this.userRepository.findAndCount({
       relations: ['profile'],
@@ -62,6 +61,9 @@ export class UserService {
       },
       skip: (page - 1) * limit,
       take: limit,
+      order: {
+        [sortBy]: order,
+      },
     });
 
     return PaginationResult(response, total, page, limit);
@@ -70,8 +72,7 @@ export class UserService {
   async findAllUserIsCustomerWithProfile(
     paginationRequestDto: PaginationRequestDto,
   ) {
-    const page = paginationRequestDto.page;
-    const limit = paginationRequestDto.limit;
+    const { page, limit, order, sortBy } = paginationRequestDto;
 
     const [response, total] = await this.userRepository.findAndCount({
       relations: ['profile'],
@@ -87,6 +88,9 @@ export class UserService {
       where: { role: Role.CUSTOMER },
       skip: (page - 1) * limit,
       take: limit,
+      order: {
+        [sortBy]: order,
+      },
     });
 
     return PaginationResult<UserWithProfileResponseDto>(

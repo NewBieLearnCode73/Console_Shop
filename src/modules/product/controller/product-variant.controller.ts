@@ -48,6 +48,12 @@ export class ProductVariantController {
     return await this.productVariantService.getVariantById(variantId);
   }
 
+  // Get variant by slug
+  @Get('/slug/:slug')
+  async getVariantBySlug(@Param('slug') slug: string) {
+    return await this.productVariantService.getVariantBySlug(slug);
+  }
+
   // Get all variants by product id
   @Get('product/:productId')
   async getVariantsByProduct(
