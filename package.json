@@ -46,6 +46,7 @@
     "class-validator": "^0.14.2",
     "crypto-js": "^4.2.0",
     "ioredis": "^5.7.0",
+    "kafkajs": "^2.2.4",
     "multer": "^2.0.2",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",

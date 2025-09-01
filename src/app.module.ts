@@ -10,6 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CartModule } from './modules/cart/cart.module';
+import { KafkaModule } from './modules/kafka/kafka.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CartModule } from './modules/cart/cart.module';
     DatabaseModule,
     SupabaseModule,
     CartModule,
+    KafkaModule,
   ],
   controllers: [],
   providers: [],

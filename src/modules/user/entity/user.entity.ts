@@ -10,6 +10,7 @@ import {
 import { Profile } from './profile.entity';
 import { Address } from './address.entity';
 import { Cart } from 'src/modules/cart/entity/cart.entity';
+import { Order } from 'src/modules/order/entity/order.entity';
 
 @Entity()
 export class User extends AbstractEntity<User> {
@@ -40,4 +41,7 @@ export class User extends AbstractEntity<User> {
 
   @OneToOne(() => Cart, (cart) => cart.user, { cascade: true })
   cart: Cart;
+
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 }

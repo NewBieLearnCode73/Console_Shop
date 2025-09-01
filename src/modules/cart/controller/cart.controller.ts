@@ -47,7 +47,7 @@ export class CartController {
   @UseGuards(JwtAuthGuard)
   async removeFromCart(
     @Req() req: AuthenticationRequest,
-    @Body() removeItemFromCartRequestDto: RemoveItemFromCartRequestDto,
+    @Query() removeItemFromCartRequestDto: RemoveItemFromCartRequestDto,
   ) {
     return this.cartService.removeItemFromCart(
       req.user.id,

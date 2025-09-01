@@ -8,6 +8,8 @@ import { ProductVariant } from 'src/modules/product/entity/product_variant.entit
 import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
 import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { Stock } from 'src/modules/product/entity/stock.entity';
+import { Product } from 'src/modules/product/entity/product.entity';
+import { ProductType } from 'src/constants/product_type.enum';
 
 @Injectable()
 export class CartService {
@@ -22,6 +24,8 @@ export class CartService {
     private readonly stockRepository: Repository<Stock>,
     @InjectRepository(ProductVariant)
     private readonly productVariantRepository: Repository<ProductVariant>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
   ) {}
 
   async getCart(userId: string, paginationRequestDto: PaginationRequestDto) {
@@ -49,6 +53,10 @@ export class CartService {
       throw new BadRequestException('Product variant not found');
     }
 
+    const productOfVariant = await this.productRepository.findOne({
+      where: { variants: { id: productVariantId } },
+    });
+
     const isQuantityValid = await this.stockRepository.findOne({
       where: {
         variant: { id: productVariantId },
@@ -60,11 +68,21 @@ export class CartService {
       throw new BadRequestException('Invalid quantity');
     }
 
+    if (
+      productOfVariant?.product_type === ProductType.CARD_DIGITAL_KEY &&
+      quantity !== 1
+    ) {
+      throw new BadRequestException(
+        'Only 1 digital key of variant can be added to the cart!',
+      );
+    }
+
     let cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['items'],
     });
 
+    // Create cart
     if (!cart) {
       cart = this.cartRepository.create({
         user: { id: userId },
@@ -79,7 +97,14 @@ export class CartService {
       (i) => i.product_variant_id === productVariantId,
     );
 
-    if (item) {
+    if (
+      item &&
+      productOfVariant?.product_type === ProductType.CARD_DIGITAL_KEY
+    ) {
+      throw new BadRequestException(
+        'Only 1 digital key of variant can be added to the cart!',
+      );
+    } else if (item) {
       // Check stock
       const isQuantityValid = await this.stockRepository.findOne({
         where: {

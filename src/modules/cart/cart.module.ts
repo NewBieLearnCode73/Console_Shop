@@ -8,10 +8,18 @@ import { User } from '../user/entity/user.entity';
 import { ProductVariant } from '../product/entity/product_variant.entity';
 import { CartController } from './controller/cart.controller';
 import { Stock } from '../product/entity/stock.entity';
+import { Product } from '../product/entity/product.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Cart, CartItem, User, ProductVariant, Stock]),
+    TypeOrmModule.forFeature([
+      Cart,
+      CartItem,
+      User,
+      ProductVariant,
+      Stock,
+      Product,
+    ]),
     ConfigModule,
   ],
   providers: [CartService],
