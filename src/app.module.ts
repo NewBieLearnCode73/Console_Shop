@@ -9,6 +9,7 @@ import { DatabaseModule } from './modules/database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { CartModule } from './modules/cart/cart.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     RefundModule,
     DatabaseModule,
     SupabaseModule,
+    CartModule,
   ],
   controllers: [],
   providers: [],

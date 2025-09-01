@@ -15,6 +15,8 @@ import { FacebookOAuthGuard } from 'src/guards/facebook_oauth.guard';
 import {
   ActiveAccountRequestDto,
   ChangePasswordDto,
+  LogoutRequestDto,
+  provideNewPairTokenDto,
   registerRequestDto,
   ResetPasswordDto,
 } from '../dto/request/auth-request.dto';
@@ -26,13 +28,29 @@ export class AuthController {
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
-  localLogin(@Request() req: AuthenticationRequest) {
+  async localLogin(@Request() req: AuthenticationRequest) {
     return this.authService.login(req.user);
   }
 
   @Post('register')
   async register(@Body() registerRequestDto: registerRequestDto) {
     return this.authService.register(registerRequestDto);
+  }
+
+  @Post('provide-new-pair-token')
+  async provideToken(@Body() provideNewPairTokenDto: provideNewPairTokenDto) {
+    return this.authService.provideTokenPair(
+      provideNewPairTokenDto.refreshToken,
+    );
+  }
+
+  @Post('logout')
+  async logout(@Body() logoutRequestDto: LogoutRequestDto) {
+    return this.authService.logout(
+      logoutRequestDto.accessToken,
+      logoutRequestDto.refreshToken,
+      logoutRequestDto.userId,
+    );
   }
 
   @Post('active-account-request')

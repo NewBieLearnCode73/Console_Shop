@@ -11,6 +11,7 @@ import {
   ParseUUIDPipe,
   BadRequestException,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ProductVariantService } from '../service/product_variant.service';
@@ -27,6 +28,19 @@ import { ListImagesIdRequestDto } from '../dto/request/product_image-request.dto
 @Controller('api/product-variants')
 export class ProductVariantController {
   constructor(private readonly productVariantService: ProductVariantService) {}
+
+  // Get similar variants by variant id
+  @Get(':id/similar')
+  async getSimilarVariants(
+    @Param('id', ParseUUIDPipe) variantId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNumber = limit ? parseInt(limit, 10) : 8;
+    return await this.productVariantService.getSimilarVariants(
+      variantId,
+      limitNumber,
+    );
+  }
 
   // Get variant by id
   @Get(':id')

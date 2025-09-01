@@ -5,18 +5,26 @@ import {
 } from '@nestjs/common';
 import { Product } from '../entity/product.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
-import { ProductResponseDto } from '../dto/response/product-response.dto';
+import {
+  ProductResponseDto,
+  SearchProductResponseDto,
+} from '../dto/response/product-response.dto';
 import { isUUID } from 'class-validator';
 import {
   CreateProductRequestDto,
+  SearchProductRequestDto,
   UpdateProductRequestDto,
   UpdateProductStatusRequestDto,
 } from '../dto/request/product-request.dto';
 import { Category } from '../entity/category.entity';
 import { generateSlug } from 'src/utils/main_helper';
 import { Brand } from '../entity/brand.entity';
+import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
+import { PaginationResult } from 'src/utils/pagination/pagination_result';
+import { ProductVariantService } from './product_variant.service';
+import { S } from 'node_modules/@faker-js/faker/dist/airline-CHFQMWko';
 @Injectable()
 export class ProductService {
   constructor(
@@ -26,14 +34,20 @@ export class ProductService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Brand)
     private readonly brandRepository: Repository<Brand>,
+    private readonly productVariantService: ProductVariantService,
+    private readonly dataSource: DataSource,
   ) {}
 
-  async findAll() {
-    const products = await this.productRepository.find({
+  async findAll(paginationRequestDto: PaginationRequestDto) {
+    const { page, limit } = paginationRequestDto;
+
+    const [response, total] = await this.productRepository.findAndCount({
       relations: ['category', 'brand'],
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
-    return products.map((product) =>
+    const products = response.map((product) =>
       plainToInstance(ProductResponseDto, {
         id: product.id,
         name: product.name,
@@ -47,6 +61,8 @@ export class ProductService {
         brand_id: product.brand?.id,
       }),
     );
+
+    return PaginationResult<ProductResponseDto>(products, total, page, limit);
   }
 
   async findOne(id: string) {
@@ -99,6 +115,50 @@ export class ProductService {
       category_id: product.category?.id,
       brand_id: product.brand?.id,
     });
+  }
+
+  async searchProductToGetVariants(
+    searchProductRequestDto: SearchProductRequestDto,
+    paginationRequestDto: PaginationRequestDto,
+  ) {
+    const { categorySlug, brandSlug } = searchProductRequestDto;
+    const { page, limit } = paginationRequestDto;
+
+    const queryBuilder = this.dataSource
+      .getRepository(Product)
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.variants', 'variant')
+      .leftJoinAndSelect('variant.images', 'images');
+
+    if (categorySlug) {
+      queryBuilder.andWhere('category.slug = :categorySlug', { categorySlug });
+    }
+
+    if (brandSlug) {
+      queryBuilder.andWhere('brand.slug = :brandSlug', { brandSlug });
+    }
+
+    queryBuilder.skip((page - 1) * limit).take(limit);
+
+    const [products, total] = await queryBuilder.getManyAndCount();
+
+    const productVariants = products.flatMap((product) =>
+      product.variants.map((variant) => ({
+        id: variant.id,
+        variant_name: variant.variant_name,
+        slug: variant.slug,
+        sku: variant.sku,
+        price: variant.price,
+        discount: variant.discount,
+        color: variant.color,
+        other_attributes: variant.other_attributes,
+        images: variant.images,
+      })),
+    );
+
+    return PaginationResult(productVariants, total, page, limit);
   }
 
   async createProduct(createProductRequestDto: CreateProductRequestDto) {

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { SupabaseService } from 'src/modules/supabase/service/supabase.service';
 import { ProfileService } from '../service/profile.service';
 import { Role } from 'src/constants/role.enum';
@@ -6,6 +14,7 @@ import { UserService } from '../service/user.service';
 import { RolesDecorator } from 'src/decorators/role_decorator';
 import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { RolesGuard } from 'src/guards/role.guard';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 
 @Controller('api/users')
 export class UserController {
@@ -21,10 +30,12 @@ export class UserController {
 
   // GET ALL USER WITH PROFILE
   @Get('admin')
-  @RolesDecorator(Role.ADMIN)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async getAllUserWithProfile() {
-    return this.userService.findAllUserWithProfile();
+  // @RolesDecorator(Role.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  async getAllUserWithProfile(
+    @Query() paginationRequestDto: PaginationRequestDto,
+  ) {
+    return this.userService.findAllUserWithProfile(paginationRequestDto);
   }
 
   // GET USER BY ID WITH PROFILE
@@ -57,10 +68,14 @@ export class UserController {
 
   //  GET ALL USER WITH PROFILE
   @Get('manager')
-  @RolesDecorator(Role.MANAGER)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async getAllUserIsCustomerWithProfile() {
-    return this.userService.findAllUserIsCustomerWithProfile();
+  // @RolesDecorator(Role.MANAGER)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  async getAllUserIsCustomerWithProfile(
+    @Query() paginationRequestDto: PaginationRequestDto,
+  ) {
+    return this.userService.findAllUserIsCustomerWithProfile(
+      paginationRequestDto,
+    );
   }
 
   // GET USER BY ID WITH PROFILE

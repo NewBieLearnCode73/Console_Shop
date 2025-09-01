@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, Length } from 'class-validator';
+import { IsEmail, IsJWT, IsNotEmpty, IsUUID, Length } from 'class-validator';
 
 export class LoginRequestDto {
   @IsEmail()
@@ -33,4 +33,24 @@ export class ActiveAccountRequestDto {
   @IsNotEmpty()
   @IsEmail()
   email: string;
+}
+
+export class LogoutRequestDto {
+  @IsNotEmpty()
+  @IsJWT()
+  accessToken: string;
+
+  @IsNotEmpty()
+  @IsJWT()
+  refreshToken: string;
+
+  @IsNotEmpty()
+  @IsUUID()
+  userId: string;
+}
+
+export class provideNewPairTokenDto {
+  @IsNotEmpty()
+  @IsJWT()
+  refreshToken: string;
 }

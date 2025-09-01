@@ -3,6 +3,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import { DataSource, In, Not, Repository } from 'typeorm';
 import { ProductVariant } from '../entity/product_variant.entity';
@@ -14,6 +15,7 @@ import { DigitalKey } from '../entity/digital_key.entity';
 import {
   CreatePhysicalVariantDto,
   CreateProductVariantDto,
+  SearchProductVariantByCategoryAndBrandRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import { SupabaseService } from '../../supabase/service/supabase.service';
 import { generateSlug, processCsvFile } from 'src/utils/main_helper';
@@ -24,6 +26,8 @@ import {
   ListKeepUrlImagesRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import { KeyGame } from 'src/interfaces/keygamge';
+import { SearchProductRequestDto } from '../dto/request/product-request.dto';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 
 @Injectable()
 export class ProductVariantService {
@@ -54,6 +58,80 @@ export class ProductVariantService {
       where: { product: { id: id } },
       relations: ['product', 'images'],
     });
+  }
+
+  async getSimilarVariants(variantId: string, limit: number = 8) {
+    const currentVariant = await this.productVariantRepository.findOne({
+      where: { id: variantId },
+      relations: ['product', 'product.category', 'product.brand'],
+    });
+
+    if (!currentVariant) {
+      throw new BadRequestException('Product variant not found');
+    }
+
+    const { product } = currentVariant;
+    const categoryId = product.category?.id;
+    const brandId = product.brand?.id;
+    const productType = product.product_type;
+
+    const queryBuilder = this.productVariantRepository
+      .createQueryBuilder('variant')
+      .leftJoinAndSelect('variant.product', 'product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('variant.images', 'images')
+      .leftJoinAndSelect('variant.stock', 'stock')
+      .where('variant.id != :currentVariantId', {
+        currentVariantId: variantId,
+      })
+      .andWhere('product.product_type = :productType', { productType });
+
+    //Same category and same brand
+    const sameCategoryAndBrandQuery = queryBuilder
+      .clone()
+      .andWhere('category.id = :categoryId', { categoryId })
+      .andWhere('brand.id = :brandId', { brandId })
+      .limit(Math.ceil(limit * 0.5)); // 50% of results
+
+    //Same category, different brand
+    const sameCategoryQuery = queryBuilder
+      .clone()
+      .andWhere('category.id = :categoryId', { categoryId })
+      .andWhere('brand.id != :brandId', { brandId })
+      .limit(Math.ceil(limit * 0.3)); // 30% of results
+
+    //Same brand, different category
+    const sameBrandQuery = queryBuilder
+      .clone()
+      .andWhere('brand.id = :brandId', { brandId })
+      .andWhere('category.id != :categoryId', { categoryId })
+      .limit(Math.ceil(limit * 0.2)); // 20% of results
+
+    const [sameCategoryAndBrand, sameCategory, sameBrand] = await Promise.all([
+      sameCategoryAndBrandQuery.getMany(),
+      sameCategoryQuery.getMany(),
+      sameBrandQuery.getMany(),
+    ]);
+
+    // Combine results with priority order
+    const similarVariants = [
+      ...sameCategoryAndBrand,
+      ...sameCategory,
+      ...sameBrand,
+    ].slice(0, limit);
+
+    return similarVariants.map((variant) => ({
+      id: variant.id,
+      variant_name: variant.variant_name,
+      slug: variant.slug,
+      sku: variant.sku,
+      price: variant.price,
+      discount: variant.discount,
+      color: variant.color,
+      other_attributes: variant.other_attributes,
+      images: variant.images,
+    }));
   }
 
   async createPhysicalVariant(

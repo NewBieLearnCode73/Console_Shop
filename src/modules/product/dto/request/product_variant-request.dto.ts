@@ -109,3 +109,13 @@ export class ListKeepUrlImagesRequestDto {
   })
   keep_images: string[];
 }
+
+export class SearchProductVariantByCategoryAndBrandRequestDto {
+  @IsOptional()
+  @IsString()
+  categorySlug?: string;
+
+  @IsOptional()
+  @IsString()
+  brandSlug?: string;
+}

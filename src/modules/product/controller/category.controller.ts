@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CategoryService } from '../service/category.service';
@@ -14,6 +15,7 @@ import {
   CreateCategoryRequestDto,
   UpdateCategoryRequestDto,
 } from '../dto/request/category-request.dto';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 // import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 // import { RolesDecorator } from 'src/decorators/role_decorator';
 // import { Role } from 'src/constants/role.enum';
@@ -24,8 +26,8 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
-  async findAll() {
-    return this.categoryService.findAllCategories();
+  async findAll(@Query() paginationRequestDto: PaginationRequestDto) {
+    return this.categoryService.findAllCategories(paginationRequestDto);
   }
 
   @Get(':id')

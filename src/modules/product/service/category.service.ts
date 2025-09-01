@@ -17,6 +17,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { generateSlug } from 'src/utils/main_helper';
+import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
+import { PaginationResult } from 'src/utils/pagination/pagination_result';
 
 @Injectable()
 export class CategoryService {
@@ -41,13 +43,19 @@ export class CategoryService {
     return plainToInstance(CategoryResponseDto, category);
   }
 
-  async findAllCategories() {
-    const categories = await this.categoryRepository.find({
+  async findAllCategories(paginationRequestDto: PaginationRequestDto) {
+    const { page, limit } = paginationRequestDto;
+
+    const [categories, total] = await this.categoryRepository.findAndCount({
       where: { parent: IsNull() },
       relations: ['children'],
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
-    return plainToInstance(CategoryResponseDto, categories);
+    const response = plainToInstance(CategoryResponseDto, categories);
+
+    return PaginationResult<CategoryResponseDto>(response, total, page, limit);
   }
 
   async createCategory(createCategoryRequestDto: CreateCategoryRequestDto) {

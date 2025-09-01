@@ -14,6 +14,8 @@ import {
   UpdateBrandRequestDto,
 } from '../dto/request/brand-request.dto';
 import { generateSlug } from 'src/utils/main_helper';
+import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
+import { PaginationResult } from 'src/utils/pagination/pagination_result';
 
 @Injectable()
 export class BrandService {
@@ -22,9 +24,16 @@ export class BrandService {
     private readonly brandRepository: Repository<Brand>,
   ) {}
 
-  async findAllBrands() {
-    const brands = await this.brandRepository.find();
-    return plainToInstance(BrandResponseDto, brands);
+  async findAllBrands(paginationRequestDto: PaginationRequestDto) {
+    const { page, limit } = paginationRequestDto;
+
+    const [response, total] = await this.brandRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const brands = plainToInstance(BrandResponseDto, response);
+    return PaginationResult<BrandResponseDto>(brands, total, page, limit);
   }
 
   async findBrandById(id: string) {

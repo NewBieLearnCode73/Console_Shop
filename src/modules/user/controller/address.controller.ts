@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -13,8 +14,10 @@ import { AddressService } from '../service/address.service';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
   CreateAddressRequestDto,
+  setDefaultAddressRequestDto,
   UpdateAddressRequestDto,
 } from '../dto/request/address-request.dto';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 
 @Controller('api/addresses')
 export class AddresController {
@@ -23,8 +26,14 @@ export class AddresController {
   // GET ALL ADDRESS BASE ON JWT
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getAllAddress(@Request() req: AuthenticationRequest) {
-    return this.addressService.getAllAdressByUserId(req.user.id);
+  async getAllAddress(
+    @Request() req: AuthenticationRequest,
+    @Query() paginationRequestDto: PaginationRequestDto,
+  ) {
+    return this.addressService.getAllAdressByUserId(
+      req.user.id,
+      paginationRequestDto,
+    );
   }
 
   // GET DEFAULT ADDRESS BASE ON JWT
@@ -59,6 +68,19 @@ export class AddresController {
       req.user.id,
       addressId,
       updateAddressDto,
+    );
+  }
+
+  // SET DEFAULT ADDRESS BASE ON JWT
+  @Patch('set-default')
+  @UseGuards(JwtAuthGuard)
+  async setDefaultAddress(
+    @Request() req: AuthenticationRequest,
+    @Body() setDefaultAddressRequestDto: setDefaultAddressRequestDto,
+  ) {
+    return this.addressService.setDefaultAddress(
+      req.user.id,
+      setDefaultAddressRequestDto.addressId,
     );
   }
 }

@@ -13,3 +13,15 @@ export class ProductResponseDto {
   category_id: string;
   brand_id: string;
 }
+
+export class SearchProductResponseDto {
+  id: string;
+  variant_name: string;
+  slug: string;
+  sku: string;
+  price: number;
+  discount: number;
+  color: string;
+  other_attributes: Record<string, any>;
+  images: object[];
+}
