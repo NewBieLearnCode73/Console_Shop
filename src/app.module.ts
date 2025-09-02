@@ -11,6 +11,7 @@ import { SupabaseModule } from './modules/supabase/supabase.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CartModule } from './modules/cart/cart.module';
 import { KafkaModule } from './modules/kafka/kafka.module';
+import { MomoModule } from './modules/momo/momo.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { KafkaModule } from './modules/kafka/kafka.module';
     SupabaseModule,
     CartModule,
     KafkaModule,
+    MomoModule,
   ],
   controllers: [],
   providers: [],

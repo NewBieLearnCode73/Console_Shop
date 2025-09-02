@@ -5,13 +5,8 @@ import { PaymentService } from '../service/payment.service';
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
-  @Get('create-payment-url')
-  createPaymentUrl(@Ip() ipAddress: string) {
-    const paymentUrl = this.paymentService.createPaymentUrl(
-      10000,
-      'orderId',
-      ipAddress,
-    );
-    return { paymentUrl };
+  @Get('momo')
+  async createMomoPayment() {
+    return this.paymentService.createMomoPayment('ChieuChieu123', 10000);
   }
 }
