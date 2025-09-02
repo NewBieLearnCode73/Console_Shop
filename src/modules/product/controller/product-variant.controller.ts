@@ -18,6 +18,7 @@ import { ProductVariantService } from '../service/product_variant.service';
 import {
   CreateProductVariantDto,
   ListKeepUrlImagesRequestDto,
+  SearchProductVariantRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import {
   CreatePhysicalVariantDto,
@@ -28,6 +29,28 @@ import { ListImagesIdRequestDto } from '../dto/request/product_image-request.dto
 @Controller('api/product-variants')
 export class ProductVariantController {
   constructor(private readonly productVariantService: ProductVariantService) {}
+
+  // Search
+  @Get('search')
+  async searchVariants(@Query() searchDto: SearchProductVariantRequestDto) {
+    return await this.productVariantService.search(searchDto);
+  }
+
+  // Get variant by slug
+  @Get('/slug/:slug')
+  async getVariantBySlug(@Param('slug') slug: string) {
+    return await this.productVariantService.getVariantBySlug(slug);
+  }
+
+  // Get all variants by product id
+  @Get('product/:productId')
+  async getVariantsByProduct(
+    @Param('productId', ParseUUIDPipe) productId: string,
+  ) {
+    return await this.productVariantService.getAllVariantsByProductId(
+      productId,
+    );
+  }
 
   // Get similar variants by variant id
   @Get(':id/similar')
@@ -46,22 +69,6 @@ export class ProductVariantController {
   @Get(':id')
   async getVariant(@Param('id', ParseUUIDPipe) variantId: string) {
     return await this.productVariantService.getVariantById(variantId);
-  }
-
-  // Get variant by slug
-  @Get('/slug/:slug')
-  async getVariantBySlug(@Param('slug') slug: string) {
-    return await this.productVariantService.getVariantBySlug(slug);
-  }
-
-  // Get all variants by product id
-  @Get('product/:productId')
-  async getVariantsByProduct(
-    @Param('productId', ParseUUIDPipe) productId: string,
-  ) {
-    return await this.productVariantService.getAllVariantsByProductId(
-      productId,
-    );
   }
 
   // Create physical variant

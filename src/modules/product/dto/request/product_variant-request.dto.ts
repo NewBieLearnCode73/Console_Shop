@@ -119,3 +119,21 @@ export class SearchProductVariantByCategoryAndBrandRequestDto {
   @IsString()
   brandSlug?: string;
 }
+
+export class SearchProductVariantRequestDto {
+  @IsNotEmpty()
+  @IsString()
+  query: string;
+
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
+  @IsOptional()
+  @IsNumber()
+  @Min(4)
+  limitProduct?: number;
+
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
+  @IsOptional()
+  @IsNumber()
+  @Min(4)
+  limitVariant?: number;
+}

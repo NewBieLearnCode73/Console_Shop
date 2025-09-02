@@ -11,3 +11,8 @@ export class ProductVariantResponseDto {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export class ProductVariantSearchResponseDto {
+  products: any[];
+  variants: any[];
+}

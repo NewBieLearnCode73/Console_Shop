@@ -5,7 +5,7 @@ import {
   NotFoundException,
   Query,
 } from '@nestjs/common';
-import { DataSource, In, Not, Repository } from 'typeorm';
+import { DataSource, ILike, In, Not, Repository } from 'typeorm';
 import { ProductVariant } from '../entity/product_variant.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductImage } from '../entity/product_image.entity';
@@ -15,6 +15,7 @@ import { DigitalKey } from '../entity/digital_key.entity';
 import {
   CreatePhysicalVariantDto,
   CreateProductVariantDto,
+  SearchProductVariantRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import { SupabaseService } from '../../supabase/service/supabase.service';
 import { generateSlug, processCsvFile } from 'src/utils/main_helper';
@@ -25,6 +26,9 @@ import {
   ListKeepUrlImagesRequestDto,
 } from '../dto/request/product_variant-request.dto';
 import { KeyGame } from 'src/interfaces/keygamge';
+import { plainToInstance } from 'class-transformer';
+import { ProductVariantSearchResponseDto } from '../dto/response/product_variant-response.dto';
+import { ProductStatus } from 'src/constants/product_status.enum';
 
 @Injectable()
 export class ProductVariantService {
@@ -61,6 +65,39 @@ export class ProductVariantService {
     return await this.productVariantRepository.find({
       where: { product: { id: id } },
       relations: ['product', 'images'],
+    });
+  }
+
+  async search(searchDto: SearchProductVariantRequestDto) {
+    const { query, limitProduct, limitVariant } = searchDto;
+
+    const productSearch = await this.productRepository.find({
+      where: { name: ILike(`%${query}%`), status: ProductStatus.ACTIVE },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+      take: limitProduct,
+    });
+
+    const variantSearch = await this.productVariantRepository.find({
+      where: {
+        variant_name: ILike(`%${query}%`),
+        product: { status: ProductStatus.ACTIVE },
+      },
+      relations: ['product'],
+      select: {
+        id: true,
+        variant_name: true,
+        slug: true,
+      },
+      take: limitVariant,
+    });
+
+    return plainToInstance(ProductVariantSearchResponseDto, {
+      products: productSearch,
+      variants: variantSearch,
     });
   }
 
