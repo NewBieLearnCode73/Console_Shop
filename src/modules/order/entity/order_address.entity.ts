@@ -25,6 +25,6 @@ export class OrderAddress extends AbstractEntity<OrderAddress> {
   @Column()
   to_province_name: string;
 
-  @OneToOne(() => Order, (order) => order.orderAddress)
+  @OneToOne(() => Order, (order) => order.orderAddress, { cascade: true })
   order: Order;
 }

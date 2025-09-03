@@ -11,7 +11,7 @@ export class OrderItem extends AbstractEntity<OrderItem> {
   @Column()
   quantity: number;
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
   // Only 1 site
@@ -22,6 +22,6 @@ export class OrderItem extends AbstractEntity<OrderItem> {
   })
   productVariant: ProductVariant;
 
-  @ManyToOne(() => Order, (order) => order.orderItems)
+  @ManyToOne(() => Order, (order) => order.orderItems, { onDelete: 'CASCADE' })
   order: Order;
 }

@@ -9,6 +9,8 @@ import { User } from '../user/entity/user.entity';
 import { ProductVariant } from '../product/entity/product_variant.entity';
 import { Stock } from '../product/entity/stock.entity';
 import { Address } from '../user/entity/address.entity';
+import { KafkaModule } from '../kafka/kafka.module';
+import { KafkaService } from '../kafka/service/kafka.service';
 
 @Module({
   imports: [
@@ -21,8 +23,9 @@ import { Address } from '../user/entity/address.entity';
       Stock,
       Address,
     ]),
+    KafkaModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService],
+  providers: [OrderService, KafkaService],
 })
 export class OrderModule {}

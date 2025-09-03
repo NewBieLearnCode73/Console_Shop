@@ -4,6 +4,7 @@ import { CustomResponseInterceptor } from './custom/custom_response_interceptor'
 import { CustomExceptionFilter } from './custom/custom_exception_filter';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,6 +12,20 @@ async function bootstrap() {
   app.useGlobalInterceptors(new CustomResponseInterceptor());
   app.useGlobalFilters(new CustomExceptionFilter());
   app.enableCors();
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        brokers: ['localhost:9092'],
+      },
+      consumer: {
+        groupId: 'my-app-consumer',
+      },
+    },
+  });
+
+  await app.startAllMicroservices();
 
   const config = new DocumentBuilder()
     .setTitle('Console Shop API')

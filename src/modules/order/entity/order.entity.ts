@@ -28,16 +28,16 @@ export class Order extends AbstractEntity<Order> {
   @Column()
   sub_total: number;
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   discount_amount: number;
 
-  @Column({ default: 22000 }) // Mặc định GHN phí vận chuyển là 22000
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 22000 })
   shipping_fee: number;
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   declaration_fee: number; // Phí khai báo: 0.005 * shipping_fee
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   total_amount: number; // sub_total + discount_amount + shipping_fee + declaration_fee
 
   @Column({
@@ -51,16 +51,24 @@ export class Order extends AbstractEntity<Order> {
   order_type: OrderType;
 
   @Column({ nullable: true })
+  expired_at: Date;
+
+  @Column({ nullable: true })
+  cancelled_at: Date;
+
+  @Column({ nullable: true })
   completed_at: Date;
 
   @ManyToOne(() => User, (user) => user.orders)
   @JoinColumn() // user_id
   user: User;
 
-  @OneToOne(() => OrderAddress, (orderAddress) => orderAddress.order)
+  @OneToOne(() => OrderAddress, (orderAddress) => orderAddress.order, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn() // order_address_id
   orderAddress: OrderAddress;
 
-  @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems: OrderItem[];
 }
