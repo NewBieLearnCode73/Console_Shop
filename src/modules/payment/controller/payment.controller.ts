@@ -1,25 +1,58 @@
-import { Body, Controller, Get, Ip, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { PaymentService } from '../service/payment.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
+import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 
 @Controller('api/payments')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
-  @EventPattern('create_momo_payment')
-  async createMomoPayment(
-    @Payload() payload: { orderId: string; amount: string },
-  ) {
-    console.log('📥 Received Kafka payload:', payload);
-  }
-
   @Post('momo/ipn')
-  async handleMomoIPN(@Body() body: any) {
+  handleMomoIPN(@Body() body: any) {
+    console.log('=== IPN Controller Called ===');
     return this.paymentService.handleMomoIPN(body);
   }
 
   @Get('momo/status')
-  async getMomoPaymentStatus(@Query('orderId') orderId: string) {
-    return await this.paymentService.getMomoPaymentStatus(orderId);
+  getMomoPaymentStatus(@Query('orderId') orderId: string) {
+    return this.paymentService.getMomoPaymentStatus(orderId);
+  }
+
+  // Route có param đặt sau
+  @Get(':orderId/payment-link')
+  @UseGuards(JwtAuthGuard)
+  async getDigitalPaymentLink(
+    @Param('orderId') orderId: string,
+    @Request() req: AuthenticationRequest,
+  ) {
+    return await this.paymentService.getDigitalPaymentLink(
+      req.user.id,
+      orderId,
+    );
+  }
+
+  @EventPattern('create_momo_payment')
+  async createMomoPayment(
+    @Payload() payload: { orderId: string; amount: number },
+  ) {
+    await this.paymentService.createMomoPayment(
+      payload.orderId,
+      payload.amount,
+    );
+  }
+
+  @EventPattern('momo_payment_success')
+  async handleMomoPaymentSuccess(@Payload() payload: { orderId: string }) {
+    await this.paymentService.handleMomoPaymentSuccess(payload.orderId);
   }
 }

@@ -1,13 +1,13 @@
-import { da } from '@faker-js/faker';
 import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventPattern, Payload } from '@nestjs/microservices';
 import axios from 'axios';
 import crypto from 'crypto';
+import Redis from 'ioredis';
+import { InjectRedis } from '@nestjs-modules/ioredis';
 import { KafkaService } from 'src/modules/kafka/service/kafka.service';
 
 @Injectable()
@@ -15,6 +15,8 @@ export class MomoService {
   constructor(
     private readonly configService: ConfigService,
     private readonly kafkaService: KafkaService,
+    @InjectRedis()
+    private readonly redis: Redis,
   ) {}
 
   generateCreateSignature(amount: string, orderId: string) {
@@ -83,12 +85,14 @@ export class MomoService {
   }
 
   generateMomoRequestBody(signature: string, orderId: string, amount: number) {
+    console.log(this.configService.get<string>('MOMO_IPN_URL'));
+
     return {
       partnerCode: 'MOMO',
       partnerName: 'Test',
       storeId: 'MomoTestStore',
       requestId: orderId,
-      amount: amount,
+      amount: Math.round(amount).toString(),
       orderId: orderId,
       orderInfo: 'Pay with Momo',
       redirectUrl: this.configService.get<string>('MOMO_REDIRECT_URL'),
@@ -103,7 +107,8 @@ export class MomoService {
   }
 
   async createMomoPayment(orderId: string, amount: number) {
-    const signature = this.generateCreateSignature(amount.toString(), orderId);
+    const amountStr = Math.round(amount).toString();
+    const signature = this.generateCreateSignature(amountStr, orderId);
 
     console.log('Momo Payment Signature:', signature);
 
@@ -113,37 +118,35 @@ export class MomoService {
       amount,
     );
 
-    const axiosInstant = axios.create({
+    const axiosInstance = axios.create({
       baseURL: this.configService.get<string>('MOMO_BASE_URL'),
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(JSON.stringify(requestBody)),
       },
     });
 
+    console.log('Momo Create Payment Request Body:', requestBody);
+
     try {
-      const response = await axiosInstant.post(
+      const response = await axiosInstance.post(
         '/v2/gateway/api/create',
         requestBody,
       );
-
       console.log('Momo Create Payment Response:', response.data);
+      // Save to redis
+      await this.redis.set(
+        `MOMO:PAYMENT:${orderId}`,
+        JSON.stringify(response.data),
+        'EX',
+        60 * 100, // 100 min
+      );
 
-      // return response.data as {
-      //   partnerCode: string;
-      //   orderId: string;
-      //   requestId: string;
-      //   amount: number;
-      //   responseTime: number;
-      //   message: string;
-      //   resultCode: number;
-      //   payUrl: string;
-      //   shortLink: string;
-      // };
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Failed to create Momo payment: ${error.message}`,
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        'Failed to create Momo payment:',
+        error.response?.data || error.message,
       );
     }
   }
@@ -173,12 +176,17 @@ export class MomoService {
     }
 
     if (data.resultCode === 0) {
-      // Payment successful
-      console.log('Momo Payment Successful:', data);
+      // Lấy orderId -> Tìm order -> Xóa expired_at (Chuyển thành null) -> Cập nhật satus thành COMPLETED
+      // Nếu là digital -> Cập nhật digital key thành USED và active_at
+      // Vào stock và trừ reserved_stock đi 1 và trừ stock đi 1
+      this.kafkaService.sendEvent('momo_payment_success', {
+        orderId: data.orderId,
+      });
+
+      console.log('OK OK OK');
 
       return 'THÀNH CÔNG!';
     } else {
-      // Payment failed
       console.log('Momo Payment Failed:', data);
       return 'THẤT BẠI!';
     }
@@ -215,22 +223,7 @@ export class MomoService {
         '/v2/gateway/api/query',
         requestBody,
       );
-
-      return response.data as {
-        partnerCode: string;
-        orderId: string;
-        requestId: string;
-        extraData: string;
-        amount: number;
-        transId: number;
-        payType: string;
-        resultCode: string;
-        refundTrans: [];
-        message: string;
-        responseTime: number;
-        lastUpdated: number;
-        signature: unknown;
-      };
+      return response.data;
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to get Momo payment status: ${error.message}`,

@@ -14,8 +14,11 @@ export class Payment extends AbstractEntity<Payment> {
   @Column({ type: 'enum', enum: PaymentStatus })
   status: PaymentStatus;
 
-  @Column()
-  txnref: string;
+  @Column({ unique: true })
+  trans_id: string; // Momo
+
+  @Column({ unique: true })
+  order_id: string;
 
   @Column()
   amount: number;

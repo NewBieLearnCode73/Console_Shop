@@ -50,8 +50,8 @@ export class Order extends AbstractEntity<Order> {
   @Column({ type: 'enum', enum: OrderType })
   order_type: OrderType;
 
-  @Column({ nullable: true })
-  expired_at: Date;
+  @Column({ nullable: true, type: 'timestamp' })
+  expired_at: Date | null;
 
   @Column({ nullable: true })
   cancelled_at: Date;

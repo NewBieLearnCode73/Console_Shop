@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { OrderDigitalBuyNowRequestDto } from '../dto/request/order-request.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, LessThan, IsNull } from 'typeorm';
 import { Order } from '../entity/order.entity';
 import { OrderItem } from '../entity/order_item.entity';
 import { OrderAddress } from '../entity/order_address.entity';
@@ -13,6 +13,12 @@ import { ProductType } from 'src/constants/product_type.enum';
 import { OrderType } from 'src/constants/order_type.enum';
 import { OrderStatus } from 'src/constants/order_status.enum';
 import { KafkaService } from 'src/modules/kafka/service/kafka.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import { Redis } from 'ioredis';
+import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
+import { KeyStatus } from 'src/constants/key_status.enum';
+import { decryptKeyGame } from 'src/utils/crypto_helper';
 
 @Injectable()
 export class OrderService {
@@ -33,7 +39,31 @@ export class OrderService {
     private readonly stockRepository: Repository<Stock>,
     private readonly kafkaService: KafkaService,
     private readonly dataSource: DataSource,
+
+    @InjectRedis() private readonly redis: Redis,
   ) {}
+  // Get digital keys for an order
+  async getDigitalKeys(userId: string, orderId: string) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId, user: { id: userId } },
+      relations: ['orderItems', 'orderItems.digitalKey'],
+    });
+    if (!order)
+      throw new BadRequestException('Order not found! Or not your order');
+    if (order.order_type !== OrderType.DIGITAL)
+      throw new BadRequestException('Not a digital product order!');
+    if (order.status !== OrderStatus.COMPLETED)
+      throw new BadRequestException('Order is not paid!');
+
+    // Return only items with digital keys
+    const digital_key = order.orderItems
+      .filter((item) => item.digitalKey)
+      .map((item) => item.digitalKey);
+
+    return digital_key.map((key) => ({
+      key_code: decryptKeyGame(key.key_code),
+    }));
+  }
 
   // BUY NOW FOR DIGITAL PRODUCT (GAME KEY)
   async digitalProductBuyNow(
@@ -46,60 +76,62 @@ export class OrderService {
       relations: ['product'],
     });
 
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new BadRequestException('User not found!');
-    }
-
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found!');
     if (
       !productVariant ||
       productVariant.product.product_type !== ProductType.CARD_DIGITAL_KEY
-    ) {
+    )
       throw new BadRequestException(
         'Product variant not found or invalid digital product!',
       );
-    }
 
-    // Proceed with the order creation logic
-    await this.dataSource.transaction(async (manager) => {
+    const savedOrder = await this.dataSource.transaction(async (manager) => {
       const stock = await manager
         .getRepository(Stock)
         .createQueryBuilder('stock')
-        .setLock('pessimistic_write') // Lock stock
+        .setLock('pessimistic_write')
         .innerJoinAndSelect('stock.variant', 'variant')
         .andWhere('variant.id = :variantId', { variantId: productVariantId })
         .getOne();
 
-      if (!stock) {
+      if (!stock)
         throw new BadRequestException(
           'Stock information not found for product variant!',
         );
-      }
 
-      // Check available
       const available = stock.quantity - stock.reserved;
-      if (available <= 0) {
+      if (available <= 0)
         throw new BadRequestException(
           'Insufficient stock for product variant!',
         );
-      }
 
       stock.reserved += 1;
       await manager.getRepository(Stock).save(stock);
 
-      // Tạo order
+      // Find 1 available digital key
+      const availableKey = await manager.getRepository(DigitalKey).findOne({
+        where: {
+          variant: { id: productVariant.id },
+          status: KeyStatus.UNUSED,
+          orderItem: IsNull(),
+        },
+      });
+
+      if (!availableKey)
+        throw new BadRequestException('No available digital keys in stock!');
+
       const orderItem = await manager.getRepository(OrderItem).save({
         quantity: 1,
         price: productVariant.price,
         productVariant,
+        digitalKey: availableKey,
       });
 
       const sub_total = orderItem.price * orderItem.quantity;
 
       const expiredAt = new Date();
-      expiredAt.setMinutes(expiredAt.getMinutes() + 100); // Hết hạn sau 100 phút
+      expiredAt.setMinutes(expiredAt.getMinutes() + 100);
 
       const order = manager.getRepository(Order).create({
         sub_total,
@@ -113,15 +145,15 @@ export class OrderService {
 
       const savedOrder = await manager.getRepository(Order).save(order);
 
-      // Public sự kiện tạo link thanh toán momo và lưu vào redis
       this.kafkaService.sendEvent('create_momo_payment', {
         orderId: savedOrder.id,
         amount: savedOrder.total_amount,
       });
 
+      console.log('Momo Payment Created:', savedOrder.id);
+
       setTimeout(
         async () => {
-          // Hủy đơn hàng sau 100 phút
           await this.cancelOrder(savedOrder.id);
         },
         100 * 60 * 1000,
@@ -129,6 +161,8 @@ export class OrderService {
 
       return savedOrder;
     });
+
+    return savedOrder;
   }
 
   // Cancel order
@@ -136,7 +170,10 @@ export class OrderService {
     try {
       await this.dataSource.transaction(async (manager) => {
         const order = await manager.getRepository(Order).findOne({
-          where: { id: orderId, status: OrderStatus.PENDING_PAYMENT },
+          where: {
+            id: orderId,
+            status: OrderStatus.PENDING_PAYMENT,
+          },
           relations: ['orderItems', 'orderItems.productVariant'],
         });
 
@@ -145,7 +182,7 @@ export class OrderService {
         }
 
         // check order expired
-        if (new Date() > order?.expired_at) {
+        if (order.expired_at && new Date() > order?.expired_at) {
           // Loop through order items to release stock
           for (const item of order.orderItems) {
             const stock = await manager
@@ -174,6 +211,22 @@ export class OrderService {
       });
     } catch (error) {
       console.error(`Error canceling order ${orderId}:`, error);
+    }
+  }
+
+  // Cron job to cancel expired orders every 5 minutes
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async cleanExpriedOrders() {
+    const expiredOrder = await this.orderRepository.find({
+      where: {
+        status: OrderStatus.PENDING_PAYMENT,
+        expired_at: LessThan(new Date()),
+      },
+      relations: ['orderItems', 'orderItems.productVariant'],
+    });
+
+    for (const order of expiredOrder) {
+      await this.cancelOrder(order.id);
     }
   }
 }
