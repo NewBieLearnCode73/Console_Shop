@@ -11,6 +11,7 @@ import { Stock } from '../product/entity/stock.entity';
 import { Address } from '../user/entity/address.entity';
 import { KafkaModule } from '../kafka/kafka.module';
 import { KafkaService } from '../kafka/service/kafka.service';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Module({
   imports: [
@@ -26,6 +27,6 @@ import { KafkaService } from '../kafka/service/kafka.service';
     KafkaModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService, KafkaService],
+  providers: [OrderService, KafkaService, JwtCookieAuthGuard],
 })
 export class OrderModule {}

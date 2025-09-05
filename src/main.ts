@@ -5,13 +5,20 @@ import { CustomExceptionFilter } from './custom/custom_exception_filter';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import cookieParser from 'cookie-parser';
+import { config } from 'dotenv';
+config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalInterceptors(new CustomResponseInterceptor());
   app.useGlobalFilters(new CustomExceptionFilter());
-  app.enableCors();
+  app.use(cookieParser());
+  app.enableCors({
+    origin: ['http://localhost:5173'],
+    credentials: true,
+  });
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
@@ -25,7 +32,9 @@ async function bootstrap() {
     },
   });
 
-  await app.startAllMicroservices();
+  await app.startAllMicroservices().then(() => {
+    console.log('Microservices are listening');
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Console Shop API')

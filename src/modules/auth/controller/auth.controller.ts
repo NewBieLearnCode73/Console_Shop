@@ -4,7 +4,9 @@ import {
   Get,
   Post,
   Query,
+  Req,
   Request,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from '../service/auth.service';
@@ -15,21 +17,60 @@ import { FacebookOAuthGuard } from 'src/guards/facebook_oauth.guard';
 import {
   ActiveAccountRequestDto,
   ChangePasswordDto,
-  LogoutRequestDto,
   provideNewPairTokenDto,
   registerRequestDto,
   ResetPasswordDto,
 } from '../dto/request/auth-request.dto';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import type {
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from 'express';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('api/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
-  async localLogin(@Request() req: AuthenticationRequest) {
-    return this.authService.login(req.user);
+  async localLogin(
+    @Request() req: AuthenticationRequest,
+    @Res() res: ExpressResponse,
+  ) {
+    try {
+      const tokens = await this.authService.login(req.user);
+
+      // Set cookies
+      res.cookie('access_token', tokens.access_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.cookie('user_id', req.user.id, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.json({ message: 'Login successful' });
+    } catch (error) {
+      console.error('Local login error:', error);
+      return { message: 'Login failed', error: error };
+    }
   }
 
   @Post('register')
@@ -44,13 +85,60 @@ export class AuthController {
     );
   }
 
+  @Get('provide-new-access-token')
+  async provideNewAccessToken(
+    @Req() req: ExpressRequest,
+    @Res() res: ExpressResponse,
+  ) {
+    const refresh_token = req.cookies['refresh_token'] || '';
+    const access_token =
+      await this.authService.provideNewAccessToken(refresh_token);
+
+    try {
+      // Set cookie
+      res.cookie('access_token', access_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+
+      res.json({ message: 'Provide new access token successful' });
+    } catch (error) {
+      console.error('Provide new access token error:', error);
+      return { message: 'Provide new access token failed', error: error };
+    }
+  }
+
   @Post('logout')
-  async logout(@Body() logoutRequestDto: LogoutRequestDto) {
-    return this.authService.logout(
-      logoutRequestDto.accessToken,
-      logoutRequestDto.refreshToken,
-      logoutRequestDto.userId,
-    );
+  async logout(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    try {
+      const access_token = req.cookies['access_token'];
+      const refresh_token = req.cookies['refresh_token'];
+      const user_id = req.cookies['user_id'];
+
+      await this.authService.logout(access_token, refresh_token, user_id);
+
+      res.clearCookie('access_token', {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+      });
+      res.clearCookie('refresh_token', {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+      });
+      res.clearCookie('user_id', {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+      });
+
+      return res.status(200).send({ message: 'Logout successful' });
+    } catch (error) {
+      return res.status(500).send({ message: 'Logout failed', error: error });
+    }
   }
 
   @Post('active-account-request')
@@ -97,8 +185,40 @@ export class AuthController {
 
   @Get('/oauth2/callback/google')
   @UseGuards(GoogleOAuthGuard)
-  googleAuthCallback(@Request() req: AuthenticationRequest) {
-    return this.authService.login(req.user);
+  async googleAuthCallback(
+    @Request() req: AuthenticationRequest,
+    @Res() res: ExpressResponse,
+  ) {
+    //  return this.authService.login(req.user);
+    try {
+      const tokens = await this.authService.login(req.user);
+
+      // Set cookies
+      res.cookie('access_token', tokens.access_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+      res.cookie('user_id', req.user.id, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      // Response
+      res.redirect(this.configService.getOrThrow('FRONTEND_URL'));
+    } catch (error) {
+      console.error('Google login error:', error);
+      res.status(500).send({ message: 'Login failed', error: error });
+    }
   }
 
   // Login with facebook
@@ -108,7 +228,37 @@ export class AuthController {
 
   @Get('oauth2/callback/facebook')
   @UseGuards(FacebookOAuthGuard)
-  facebookAuthCallback(@Request() req: AuthenticationRequest) {
-    return this.authService.login(req.user);
+  async facebookAuthCallback(
+    @Request() req: AuthenticationRequest,
+    @Res() res: ExpressResponse,
+  ) {
+    try {
+      const tokens = await this.authService.login(req.user);
+      // Set cookies
+      res.cookie('access_token', tokens.access_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+      res.cookie('refresh_token', tokens.refresh_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+      res.cookie('user_id', req.user.id, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      // Response
+      res.redirect(this.configService.getOrThrow('FRONTEND_URL'));
+    } catch (error) {
+      res.status(500).send({ message: 'Login failed', error: error });
+      console.error('Facebook login error:', error);
+    }
   }
 }

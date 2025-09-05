@@ -184,11 +184,11 @@ export class AuthService {
 
     const newAccessToken = this.jwtService.sign(
       { id: userId },
-      { expiresIn: '7d' },
+      { expiresIn: this.configService.get<string>('ACCESS_EXPIRE') },
     );
     const newRefreshToken = this.jwtService.sign(
       { id: userId },
-      { expiresIn: '14d' },
+      { expiresIn: this.configService.get<string>('REFRESH_EXPIRE') },
     );
 
     const ttl = this.getTTLToken(refreshToken);
@@ -203,6 +203,31 @@ export class AuthService {
     await this.saveRefreshToken(userId, newRefreshToken);
 
     return { access_token: newAccessToken, refresh_token: newRefreshToken };
+  }
+
+  async provideNewAccessToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+
+    // Check in black list
+    const isBlacklisted = await this.redis.get(
+      `BLACKLIST:REFRESH:${refreshToken}`,
+    );
+    if (isBlacklisted)
+      throw new UnauthorizedException('Refresh token is blacklisted');
+
+    const userId = await this.redis.get(`REFRESH_TOKEN:${refreshToken}`);
+    if (!userId) throw new UnauthorizedException('Invalid refresh token');
+
+    const newAccessToken = this.jwtService.sign(
+      { id: userId },
+      { expiresIn: this.configService.get<string>('ACCESS_EXPIRE') },
+    );
+
+    await this.saveAccessToken(userId, newAccessToken);
+
+    return newAccessToken;
   }
 
   async hashPassword(password: string) {
@@ -249,8 +274,12 @@ export class AuthService {
       id: user.id,
       role: user.role,
     };
-    const access_token = this.jwtService.sign(payload, { expiresIn: '7d' });
-    const refresh_token = this.jwtService.sign(payload, { expiresIn: '14d' });
+    const access_token = this.jwtService.sign(payload, {
+      expiresIn: this.configService.getOrThrow<string>('ACCESS_EXPIRE'),
+    });
+    const refresh_token = this.jwtService.sign(payload, {
+      expiresIn: this.configService.getOrThrow<string>('REFRESH_EXPIRE'),
+    });
 
     await this.saveAccessToken(user.id, access_token);
     await this.saveRefreshToken(user.id, refresh_token);
@@ -262,6 +291,10 @@ export class AuthService {
   }
 
   async logout(accessToken: string, refreshToken: string, userId: string) {
+    if (!accessToken || !refreshToken || !userId) {
+      throw new UnauthorizedException('Missing tokens or user ID for logout');
+    }
+
     const accessTokenTtl = this.getTTLToken(accessToken);
     const refreshTokenTtl = this.getTTLToken(refreshToken);
 

@@ -11,13 +11,14 @@ import { OrderDigitalBuyNowRequestDto } from '../dto/request/order-request.dto';
 import { OrderService } from '../service/order.service';
 import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/orders')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @Get('/digital_keys/:orderId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async getDigitalKeys(
     @Param('orderId') orderId: string,
     @Req() req: AuthenticationRequest,

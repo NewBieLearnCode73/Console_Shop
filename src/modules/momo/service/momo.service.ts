@@ -176,14 +176,11 @@ export class MomoService {
     }
 
     if (data.resultCode === 0) {
-      // Lấy orderId -> Tìm order -> Xóa expired_at (Chuyển thành null) -> Cập nhật satus thành COMPLETED
-      // Nếu là digital -> Cập nhật digital key thành USED và active_at
-      // Vào stock và trừ reserved_stock đi 1 và trừ stock đi 1
       this.kafkaService.sendEvent('momo_payment_success', {
         orderId: data.orderId,
       });
 
-      console.log('OK OK OK');
+      console.log('OK OK OK resultCode is 0');
 
       return 'THÀNH CÔNG!';
     } else {

@@ -18,6 +18,7 @@ import { CustomGoogleStrategy } from 'src/custom/custom_google_strategy';
 import { CustomFacebookStrategy } from 'src/custom/custom_facebook_strategy';
 import { validateLoginDtoMiddleware } from 'src/middlewares/validatedto.middleware';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { CustomJwtCookieStrategy } from 'src/custom/custom_jwt_cookie_strategy';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
     CustomJwtStrategy,
     CustomGoogleStrategy,
     CustomFacebookStrategy,
+    CustomJwtCookieStrategy,
     validateLoginDtoMiddleware,
     ConfigModule,
     RedisModule,
