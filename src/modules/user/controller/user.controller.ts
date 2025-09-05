@@ -15,6 +15,7 @@ import { RolesDecorator } from 'src/decorators/role_decorator';
 import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { RolesGuard } from 'src/guards/role.guard';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/users')
 export class UserController {
@@ -30,8 +31,8 @@ export class UserController {
 
   // GET ALL USER WITH PROFILE
   @Get('admin')
-  // @RolesDecorator(Role.ADMIN)
-  // @UseGuards(JwtAuthGuard, RolesGuard)
+  @RolesDecorator(Role.CUSTOMER)
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   async getAllUserWithProfile(
     @Query() paginationRequestDto: PaginationRequestDto,
   ) {

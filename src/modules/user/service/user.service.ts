@@ -31,6 +31,7 @@ export class UserService {
         id: true,
         role: true,
         is_active: true,
+        createdAt: true,
         profile: {
           fullname: true,
           avatar_url: true,
@@ -54,6 +55,7 @@ export class UserService {
         id: true,
         role: true,
         is_active: true,
+        createdAt: true,
         profile: {
           fullname: true,
           avatar_url: true,
@@ -80,6 +82,7 @@ export class UserService {
         id: true,
         role: true,
         is_active: true,
+        createdAt: true,
         profile: {
           fullname: true,
           avatar_url: true,
@@ -113,6 +116,7 @@ export class UserService {
         id: true,
         role: true,
         is_active: true,
+        createdAt: true,
         profile: {
           fullname: true,
           avatar_url: true,

@@ -66,7 +66,7 @@ export class AuthController {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      res.json({ message: 'Login successful' });
+      return res.status(200).send({ message: 'Login successful' });
     } catch (error) {
       console.error('Local login error:', error);
       return { message: 'Login failed', error: error };
@@ -103,10 +103,12 @@ export class AuthController {
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
-      res.json({ message: 'Provide new access token successful' });
+      return res.status(200).send({ message: 'Provide new access token' });
     } catch (error) {
       console.error('Provide new access token error:', error);
-      return { message: 'Provide new access token failed', error: error };
+      return res
+        .status(500)
+        .send({ message: 'Provide new access token failed', error: error });
     }
   }
 
