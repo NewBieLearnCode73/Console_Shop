@@ -214,7 +214,29 @@ export class AuthController {
       });
 
       // Response
-      res.redirect(this.configService.getOrThrow('FRONTEND_URL'));
+      // res.redirect(this.configService.getOrThrow('FRONTEND_URL'));
+      res.send(`
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <script>
+            (function() {
+              try {
+                if (window.opener && !window.opener.closed) {
+                  window.opener.postMessage({ type: 'OAUTH_SUCCESS' }, "${this.configService.getOrThrow('FRONTEND_URL')}");
+                  window.close();
+                } else {
+                  window.location.href = "${this.configService.getOrThrow('FRONTEND_URL')}";
+                }
+              } catch (err) {
+                console.error("OAuth callback error:", err);
+                window.location.href = "${this.configService.getOrThrow('FRONTEND_URL')}";
+              }
+            })();
+          </script>
+        </body>
+      </html>
+    `);
     } catch (error) {
       console.error('Google login error:', error);
       res.status(500).send({ message: 'Login failed', error: error });
