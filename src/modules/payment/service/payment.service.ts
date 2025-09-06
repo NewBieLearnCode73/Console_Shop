@@ -6,12 +6,15 @@ import { Redis } from 'ioredis';
 import { KeyStatus } from 'src/constants/key_status.enum';
 import { OrderStatus } from 'src/constants/order_status.enum';
 import { OrderType } from 'src/constants/order_type.enum';
+import { PaymentMethod } from 'src/constants/payment_method.enum';
+import { PaymentStatus } from 'src/constants/payment_status.enum';
 import { KafkaService } from 'src/modules/kafka/service/kafka.service';
 import { MomoService } from 'src/modules/momo/service/momo.service';
 import { Order } from 'src/modules/order/entity/order.entity';
 import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
 import { Stock } from 'src/modules/product/entity/stock.entity';
 import { Repository } from 'typeorm';
+import { Payment } from '../entity/payment.entity';
 
 @Injectable()
 export class PaymentService {
@@ -25,7 +28,8 @@ export class PaymentService {
     private readonly digitalKeyRepository: Repository<DigitalKey>,
     @InjectRepository(Stock)
     private readonly stockRepository: Repository<Stock>,
-
+    @InjectRepository(Payment)
+    private readonly paymentRepository: Repository<Payment>,
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
@@ -54,6 +58,9 @@ export class PaymentService {
       throw new BadRequestException(
         'Only digital product orders can use online payment!',
       );
+
+    if (order.status === OrderStatus.CANCELED)
+      throw new BadRequestException('This order was canceled!');
 
     if (order.status !== OrderStatus.PENDING_PAYMENT)
       throw new BadRequestException(
@@ -135,5 +142,28 @@ export class PaymentService {
 
       await this.orderRepository.save(order);
     }
+  }
+
+  async createPaymentRecord(data: {
+    orderId: string;
+    amount: number;
+    method: PaymentMethod;
+    trans_id: string;
+    status: PaymentStatus;
+    paid_at: Date;
+  }) {
+    console.log('Creating payment record:', data);
+
+    const payment = this.paymentRepository.create({
+      amount: data.amount,
+      method: data.method,
+      order_id: data.orderId,
+      paid_at: data.paid_at,
+      status: data.status,
+      trans_id: data.trans_id,
+    });
+
+    await this.paymentRepository.save(payment);
+    console.log('Payment record created:', payment);
   }
 }

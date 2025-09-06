@@ -3,7 +3,6 @@ import {
   BadRequestException,
   InternalServerErrorException,
   NotFoundException,
-  Query,
 } from '@nestjs/common';
 import { DataSource, ILike, In, Not, Repository } from 'typeorm';
 import { ProductVariant } from '../entity/product_variant.entity';
@@ -47,21 +46,68 @@ export class ProductVariantService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async getVariantById(id: string) {
+  async getVariantByIdWithCostPrice(id: string) {
     return this.productVariantRepository.findOne({
       where: { id: id },
       relations: ['product', 'stock', 'images'],
     });
   }
 
-  async getVariantBySlug(slug: string) {
-    return await this.productVariantRepository.findOne({
+  async getVariantById(id: string) {
+    const variant = await this.productVariantRepository.findOne({
+      where: { id: id },
+      relations: ['product', 'stock', 'images'],
+    });
+    if (!variant) {
+      throw new NotFoundException('Product variant not found');
+    }
+
+    // Exclude cost_price from the response
+    const { cost_price, ...variantWithoutCostPrice } = variant;
+    return variantWithoutCostPrice;
+  }
+
+  async getVariantBySlugWithCostPrice(slug: string) {
+    const variant = await this.productVariantRepository.findOne({
       where: { slug: slug },
       relations: ['product', 'stock', 'images'],
     });
+    if (!variant) {
+      throw new NotFoundException('Product variant not found');
+    }
+    return variant;
+  }
+
+  async getVariantBySlug(slug: string) {
+    const variant = await this.productVariantRepository.findOne({
+      where: { slug: slug },
+      relations: ['product', 'stock', 'images'],
+    });
+    if (!variant) {
+      throw new NotFoundException('Product variant not found');
+    }
+    // Exclude cost_price from the response
+    const { cost_price, ...variantWithoutCostPrice } = variant;
+    return variantWithoutCostPrice;
   }
 
   async getAllVariantsByProductId(id: string) {
+    const variants = await this.productVariantRepository.find({
+      where: { product: { id: id } },
+      relations: ['product', 'images'],
+    });
+
+    if (!variants || variants.length === 0) {
+      throw new NotFoundException('No variants found for this product');
+    }
+
+    return variants.map((variant) => {
+      const { cost_price, ...variantWithoutCostPrice } = variant;
+      return variantWithoutCostPrice;
+    });
+  }
+
+  async getAllVariantsByProductIdWithCostPrice(id: string) {
     return await this.productVariantRepository.find({
       where: { product: { id: id } },
       relations: ['product', 'images'],
@@ -186,6 +232,7 @@ export class ProductVariantService {
       sku,
       price,
       color,
+      cost_price,
       other_attributes,
       quantity,
       ...rest
@@ -238,6 +285,7 @@ export class ProductVariantService {
             product: product,
             variant_name: variant_name,
             slug: generateSlug(variant_name),
+            cost_price: cost_price,
             sku: sku,
             price: price,
             color: color,
@@ -318,8 +366,15 @@ export class ProductVariantService {
       throw new BadRequestException('Invalid CSV file');
     }
 
-    const { product_id, variant_name, sku, price, other_attributes, ...rest } =
-      createProductVariantDto;
+    const {
+      product_id,
+      variant_name,
+      sku,
+      price,
+      other_attributes,
+      cost_price,
+      ...rest
+    } = createProductVariantDto;
 
     if (!isUUID(product_id)) {
       throw new BadRequestException('Invalid product ID');
@@ -373,6 +428,7 @@ export class ProductVariantService {
           {
             product,
             variant_name,
+            cost_price,
             slug: generateSlug(variant_name),
             sku,
             price,

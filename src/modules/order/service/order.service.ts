@@ -134,6 +134,7 @@ export class OrderService {
       expiredAt.setMinutes(expiredAt.getMinutes() + 100);
 
       const order = manager.getRepository(Order).create({
+        status: OrderStatus.PENDING_PAYMENT,
         sub_total,
         shipping_fee: 0,
         total_amount: sub_total,
@@ -154,7 +155,7 @@ export class OrderService {
 
       setTimeout(
         async () => {
-          await this.cancelOrder(savedOrder.id);
+          await this.autoCancelOnlineOrder(savedOrder.id);
         },
         100 * 60 * 1000,
       );
@@ -166,7 +167,7 @@ export class OrderService {
   }
 
   // Cancel order
-  async cancelOrder(orderId: string) {
+  async autoCancelOnlineOrder(orderId: string) {
     try {
       await this.dataSource.transaction(async (manager) => {
         const order = await manager.getRepository(Order).findOne({
@@ -226,7 +227,7 @@ export class OrderService {
     });
 
     for (const order of expiredOrder) {
-      await this.cancelOrder(order.id);
+      await this.autoCancelOnlineOrder(order.id);
     }
   }
 }

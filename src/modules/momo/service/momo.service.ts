@@ -9,6 +9,9 @@ import crypto from 'crypto';
 import Redis from 'ioredis';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import { KafkaService } from 'src/modules/kafka/service/kafka.service';
+import { PaymentMethod } from 'src/constants/payment_method.enum';
+import { PaymentStatus } from 'src/constants/payment_status.enum';
+import { T } from 'node_modules/@faker-js/faker/dist/airline-CHFQMWko';
 
 @Injectable()
 export class MomoService {
@@ -182,9 +185,30 @@ export class MomoService {
 
       console.log('OK OK OK resultCode is 0');
 
+      // Tạo Payment
+      this.kafkaService.sendEvent('create_payment_record', {
+        orderId: data.orderId,
+        amount: data.amount,
+        method: PaymentMethod.MOMO_WALLET,
+        trans_id: data.transId,
+        status: PaymentStatus.SUCCESS,
+        paid_at: new Date(),
+      });
+
       return 'THÀNH CÔNG!';
     } else {
       console.log('Momo Payment Failed:', data);
+
+      // Tạo Payment
+      this.kafkaService.sendEvent('create_payment_record', {
+        orderId: data.orderId,
+        amount: data.amount,
+        method: PaymentMethod.MOMO_WALLET,
+        Trans_id: data.transId,
+        status: PaymentStatus.FAILED,
+        paid_at: new Date(),
+      });
+
       return 'THẤT BẠI!';
     }
   }

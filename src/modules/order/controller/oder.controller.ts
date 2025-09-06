@@ -37,4 +37,13 @@ export class OrderController {
       orderDigitalBuyNowRequestDto,
     );
   }
+
+  // @Post('cancel-order/:orderId')
+  // @UseGuards(JwtAuthGuard)
+  // async cancelOrder(
+  //   @Param('orderId') orderId: string,
+  //   @Req() req: AuthenticationRequest,
+  // ) {
+  //   return await this.orderService.cancelOrder(req.user.id, orderId);
+  // }
 }

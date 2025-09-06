@@ -12,6 +12,8 @@ import { PaymentService } from '../service/payment.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
+import { PaymentStatus } from 'src/constants/payment_status.enum';
+import { PaymentMethod } from 'src/constants/payment_method.enum';
 
 @Controller('api/payments')
 export class PaymentController {
@@ -29,10 +31,10 @@ export class PaymentController {
   }
 
   // Route có param đặt sau
-  @Get(':orderId/payment-link')
+  @Get('payment-link')
   @UseGuards(JwtAuthGuard)
   async getDigitalPaymentLink(
-    @Param('orderId') orderId: string,
+    @Query('orderId') orderId: string,
     @Request() req: AuthenticationRequest,
   ) {
     return await this.paymentService.getDigitalPaymentLink(
@@ -54,5 +56,20 @@ export class PaymentController {
   @EventPattern('momo_payment_success')
   async handleMomoPaymentSuccess(@Payload() payload: { orderId: string }) {
     await this.paymentService.handleMomoPaymentSuccess(payload.orderId);
+  }
+
+  @EventPattern('create_payment_record')
+  async createPaymentRecord(
+    @Payload()
+    payload: {
+      orderId: string;
+      amount: number;
+      method: PaymentMethod;
+      trans_id: string;
+      status: PaymentStatus;
+      paid_at: Date;
+    },
+  ) {
+    await this.paymentService.createPaymentRecord(payload);
   }
 }

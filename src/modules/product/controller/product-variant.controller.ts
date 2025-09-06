@@ -42,12 +42,28 @@ export class ProductVariantController {
     return await this.productVariantService.getVariantBySlug(slug);
   }
 
+  // Get variant by slug with cost price
+  @Get('/slug-with-cost-price/:slug')
+  async getVariantBySlugWithCostPrice(@Param('slug') slug: string) {
+    return await this.productVariantService.getVariantBySlugWithCostPrice(slug);
+  }
+
   // Get all variants by product id
   @Get('product/:productId')
   async getVariantsByProduct(
     @Param('productId', ParseUUIDPipe) productId: string,
   ) {
     return await this.productVariantService.getAllVariantsByProductId(
+      productId,
+    );
+  }
+
+  // Get all variants by product id with cost price
+  @Get('product-with-cost-price/:productId')
+  async getVariantsByProductWithCostPrice(
+    @Param('productId', ParseUUIDPipe) productId: string,
+  ) {
+    return await this.productVariantService.getAllVariantsByProductIdWithCostPrice(
       productId,
     );
   }
@@ -69,6 +85,14 @@ export class ProductVariantController {
   @Get(':id')
   async getVariant(@Param('id', ParseUUIDPipe) variantId: string) {
     return await this.productVariantService.getVariantById(variantId);
+  }
+
+  // Get variant by id with cost price
+  @Get(':id/with-cost-price')
+  async getVariantWithCostPrice(@Param('id', ParseUUIDPipe) variantId: string) {
+    return await this.productVariantService.getVariantByIdWithCostPrice(
+      variantId,
+    );
   }
 
   // Create physical variant

@@ -27,7 +27,10 @@ export class ProductVariant extends AbstractEntity<ProductVariant> {
   @Column({ nullable: false, unique: true })
   sku: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
+  cost_price: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
   price: number;
 
   @Column({

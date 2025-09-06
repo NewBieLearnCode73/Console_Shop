@@ -43,7 +43,6 @@ export class Order extends AbstractEntity<Order> {
   @Column({
     type: 'enum',
     enum: OrderStatus,
-    default: OrderStatus.PENDING_PAYMENT,
   })
   status: OrderStatus;
 

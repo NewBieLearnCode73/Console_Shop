@@ -48,6 +48,8 @@ export async function bootstrap(amount = 5) {
       variant_name: variantName,
       slug: faker.helpers.slugify(variantName.toLowerCase()),
       sku: `SKU-${product.id}-${faker.string.alphanumeric(6)}`,
+      // Cost price phải nhỏ hơn price
+      cost_price: faker.number.int({ min: 50, max: 1000 }),
       price: faker.number.int({ min: 100, max: 2000 }),
       color: faker.color.human(),
       other_attributes: {

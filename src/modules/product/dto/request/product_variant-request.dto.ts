@@ -8,7 +8,6 @@ import {
   IsObject,
   IsArray,
   IsNotEmpty,
-  IsInstance,
   IsUrl,
 } from 'class-validator';
 
@@ -24,6 +23,12 @@ export class CreateProductVariantDto {
   @IsString()
   @IsNotEmpty()
   sku: string;
+
+  @Transform(({ value }) => parseFloat(value))
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @IsNotEmpty()
+  cost_price: number;
 
   @Transform(({ value }) => parseFloat(value))
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -69,6 +74,11 @@ export class UpdateVariantDto {
   @IsNotEmpty()
   @IsString()
   sku: string;
+
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
+  @IsNotEmpty()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  cost_price: number;
 
   @Transform(({ value }) => (value ? parseFloat(value) : undefined))
   @IsNotEmpty()

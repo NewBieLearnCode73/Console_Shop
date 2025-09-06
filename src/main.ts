@@ -20,21 +20,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        brokers: ['localhost:9092'],
-      },
-      consumer: {
-        groupId: 'my-app-consumer',
-      },
-    },
-  });
-
-  await app.startAllMicroservices().then(() => {
-    console.log('Microservices are listening');
-  });
+  await app.listen(process.env.PORT ?? 3000);
 
   const config = new DocumentBuilder()
     .setTitle('Console Shop API')
@@ -46,6 +32,49 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  // app.connectMicroservice<MicroserviceOptions>({
+  //   transport: Transport.KAFKA,
+  //   options: {
+  //     client: {
+  //       brokers: ['localhost:9092'],
+  //     },
+  //     consumer: {
+  //       groupId: 'my-app-consumer',
+  //     },
+  //   },
+  // });
+
+  // Connect Kafka microservice async
+  const kafkaMicroservice = app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        brokers: ['localhost:9092'], // Docker: đổi thành 'kafka:9092'
+      },
+      consumer: {
+        groupId: 'my-app-consumer',
+      },
+    },
+  });
+
+  // Start Kafka async với retry đơn giản
+  const startKafka = async () => {
+    let connected = false;
+    while (!connected) {
+      try {
+        await kafkaMicroservice.listen();
+        connected = true;
+        console.log('Kafka microservice connected');
+      } catch (e) {
+        console.log('Kafka not ready, retry in 3s...');
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+  };
+
+  // await app.startAllMicroservices().then(() => {
+  //   console.log('Microservices are listening');
+  // });
+  await startKafka(); // chạy async, không block API
 }
 bootstrap();
