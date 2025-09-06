@@ -16,7 +16,7 @@ async function bootstrap() {
   app.useGlobalFilters(new CustomExceptionFilter());
   app.use(cookieParser());
   app.enableCors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:3001'],
     credentials: true,
   });
 
