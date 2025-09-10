@@ -7,14 +7,11 @@ import { Product } from '../entity/product.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
-import {
-  ProductResponseDto,
-  SearchProductResponseDto,
-} from '../dto/response/product-response.dto';
+import { ProductResponseDto } from '../dto/response/product-response.dto';
 import { isUUID } from 'class-validator';
 import {
   CreateProductRequestDto,
-  SearchProductRequestDto,
+  FilterProductRequestDto,
   UpdateProductRequestDto,
   UpdateProductStatusRequestDto,
 } from '../dto/request/product-request.dto';
@@ -24,8 +21,9 @@ import { Brand } from '../entity/brand.entity';
 import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
 import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { ProductVariantService } from './product_variant.service';
-import { S } from 'node_modules/@faker-js/faker/dist/airline-CHFQMWko';
-import { ProductVariant } from '../entity/product_variant.entity';
+import { ProductStatus } from 'src/constants/product_status.enum';
+import { ProductType } from 'src/constants/product_type.enum';
+import { Stock } from '../entity/stock.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -35,20 +33,126 @@ export class ProductService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Brand)
     private readonly brandRepository: Repository<Brand>,
+    @InjectRepository(Stock)
+    private readonly stockRepository: Repository<Stock>,
     private readonly productVariantService: ProductVariantService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
-  async findAll(paginationRequestDto: PaginationRequestDto) {
+  //****************** FOR USER AND GUEST - START **********************//
+  async findAllProductsForUsersAndGuests(
+    paginationRequestDto: PaginationRequestDto,
+  ) {
     const { page, limit, order, sortBy } = paginationRequestDto;
 
     const [response, total] = await this.productRepository.findAndCount({
-      relations: ['category', 'brand'],
+      where: { status: ProductStatus.ACTIVE },
+      relations: ['category', 'brand', 'variants', 'variants.images'],
       skip: (page - 1) * limit,
       take: limit,
       order: {
         [sortBy]: order,
       },
+    });
+
+    const products = response.map((product) =>
+      plainToInstance(ProductResponseDto, {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        product_type: product.product_type,
+        status: product.status,
+        slug: product.slug,
+        seo_title: product.seo_title,
+        seo_description: product.seo_description,
+        category_id: product.category?.id,
+        brand_id: product.brand?.id,
+        image: product.variants?.[0]?.images?.[0]?.product_url || null,
+        price: Math.min(...product.variants.map((v) => v.price)) || null,
+      }),
+    );
+
+    return PaginationResult<ProductResponseDto>(products, total, page, limit);
+  }
+
+  async findProductVariantsForUsersAndGuests(slug: string) {
+    const product = await this.productRepository.findOne({
+      where: { slug, status: ProductStatus.ACTIVE },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return this.productVariantService.getAllVariantsByProductId(product.id);
+  }
+
+  async filterProductsForUsersAndGuests(
+    filterProductRequestDto: FilterProductRequestDto,
+    paginationRequestDto: PaginationRequestDto,
+  ) {
+    const { categorySlug, brandSlug } = filterProductRequestDto;
+    const { page, limit, order, sortBy } = paginationRequestDto;
+
+    const query = this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('variants.images', 'images')
+      .where('product.status = :status', { status: ProductStatus.ACTIVE });
+
+    if (categorySlug) {
+      query.andWhere('category.slug = :categorySlug', { categorySlug });
+    }
+
+    if (brandSlug) {
+      query.andWhere('brand.slug = :brandSlug', { brandSlug });
+    }
+
+    const [response, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy(`product.${sortBy}`, order)
+      .getManyAndCount();
+
+    const products = response.map((product) =>
+      plainToInstance(ProductResponseDto, {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        product_type: product.product_type,
+        status: product.status,
+        slug: product.slug,
+        seo_title: product.seo_title,
+        seo_description: product.seo_description,
+        category_id: product.category?.id,
+        brand_id: product.brand?.id,
+        image: product.variants?.[0]?.images?.[0]?.product_url || null,
+        price: Math.min(...product.variants.map((v) => v.price)) || null,
+      }),
+    );
+
+    return PaginationResult<ProductResponseDto>(products, total, page, limit);
+  }
+
+  //****************** FOR USER AND GUEST - END **********************//
+
+  //******************* FOR MANAGER or ADMIN*******************/
+  async findAll(
+    paginationRequestDto: PaginationRequestDto,
+    status?: ProductStatus,
+  ) {
+    const { page, limit, order, sortBy } = paginationRequestDto;
+
+    const [response, total] = await this.productRepository.findAndCount({
+      relations: ['category', 'brand', 'variants', 'variants.images'],
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        [sortBy]: order,
+      },
+      where: status ? { status } : {},
     });
 
     const products = response.map((product) =>
@@ -119,36 +223,6 @@ export class ProductService {
       category_id: product.category?.id,
       brand_id: product.brand?.id,
     });
-  }
-
-  async searchProductToGetVariants(
-    searchProductRequestDto: SearchProductRequestDto,
-    paginationRequestDto: PaginationRequestDto,
-  ) {
-    const { categorySlug, brandSlug } = searchProductRequestDto;
-    const { page, limit } = paginationRequestDto;
-
-    const queryBuilder = this.dataSource
-      .getRepository(ProductVariant)
-      .createQueryBuilder('variant')
-      .leftJoinAndSelect('variant.product', 'product')
-      .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.brand', 'brand')
-      .leftJoinAndSelect('variant.images', 'images');
-
-    if (categorySlug) {
-      queryBuilder.andWhere('category.slug = :categorySlug', { categorySlug });
-    }
-
-    if (brandSlug) {
-      queryBuilder.andWhere('brand.slug = :brandSlug', { brandSlug });
-    }
-
-    queryBuilder.skip((page - 1) * limit).take(limit);
-
-    const [variants, total] = await queryBuilder.getManyAndCount();
-
-    return PaginationResult(variants, total, page, limit);
   }
 
   async createProduct(createProductRequestDto: CreateProductRequestDto) {
@@ -265,13 +339,71 @@ export class ProductService {
 
     const product = await this.productRepository.findOne({
       where: { id },
-      relations: ['category', 'brand'],
+      relations: ['category', 'brand', 'variants'],
     });
+
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
-    product.status = updateProductStatus.status;
+    const newStatus = updateProductStatus.status;
+    const currentStatus = product.status;
+
+    switch (newStatus) {
+      case ProductStatus.ACTIVE:
+        if (currentStatus !== ProductStatus.INACTIVE) {
+          throw new BadRequestException('Can only activate from INACTIVE');
+        }
+        const hasStock = await this.productVariantService.hasAvailableStock(
+          product.id,
+        );
+        if (!hasStock) {
+          throw new BadRequestException(
+            'Cannot activate product without available stock',
+          );
+        }
+        break;
+
+      case ProductStatus.INACTIVE:
+        if (currentStatus !== ProductStatus.ACTIVE) {
+          throw new BadRequestException('Can only inactivate from ACTIVE');
+        }
+        break;
+
+      case ProductStatus.ARCHIVED:
+        if (
+          currentStatus !== ProductStatus.ACTIVE &&
+          currentStatus !== ProductStatus.INACTIVE
+        ) {
+          throw new BadRequestException(
+            'Can only archive from ACTIVE or INACTIVE',
+          );
+        }
+        break;
+
+      case ProductStatus.OUT_OF_STOCK:
+        if (
+          product.product_type !== ProductType.DEVICE &&
+          product.product_type !== ProductType.CARD_PHYSICAL
+        ) {
+          throw new BadRequestException(
+            'OUT_OF_STOCK only applies to DEVICE or CARD_PHYSICAL',
+          );
+        }
+        if (currentStatus === ProductStatus.ARCHIVED) {
+          throw new BadRequestException(
+            'Cannot mark archived product as out of stock',
+          );
+        }
+
+        await this.productVariantService.setAllVariantsToZero(product.id);
+        break;
+
+      default:
+        throw new BadRequestException('Invalid status transition');
+    }
+
+    product.status = newStatus;
     await this.productRepository.save(product);
 
     return plainToInstance(ProductResponseDto, {

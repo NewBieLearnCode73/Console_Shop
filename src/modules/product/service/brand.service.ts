@@ -22,7 +22,7 @@ export class BrandService {
   constructor(
     @InjectRepository(Brand)
     private readonly brandRepository: Repository<Brand>,
-  ) {}
+  ) { }
 
   async findAllBrands(paginationRequestDto: PaginationRequestDto) {
     const { page, limit, sortBy, order } = paginationRequestDto;

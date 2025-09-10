@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, ILike, In, Not, Repository } from 'typeorm';
+import { DataSource, ILike, In, MoreThan, Not, Repository } from 'typeorm';
 import { ProductVariant } from '../entity/product_variant.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductImage } from '../entity/product_image.entity';
@@ -28,6 +28,14 @@ import { KeyGame } from 'src/interfaces/keygamge';
 import { plainToInstance } from 'class-transformer';
 import { ProductVariantSearchResponseDto } from '../dto/response/product_variant-response.dto';
 import { ProductStatus } from 'src/constants/product_status.enum';
+import { ProductType } from 'src/constants/product_type.enum';
+import { PaginationRequestDto } from '../../../utils/pagination/pagination_dto';
+import { PaginationResult } from 'src/utils/pagination/pagination_result';
+import {
+  decryptKeyGame,
+  encryptKeyGame,
+  hashKeyGame,
+} from 'src/utils/crypto_helper';
 
 @Injectable()
 export class ProductVariantService {
@@ -44,81 +52,17 @@ export class ProductVariantService {
     private readonly digitalKeyRepository: Repository<DigitalKey>,
     private readonly supabaseService: SupabaseService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
-  async getVariantByIdWithCostPrice(id: string) {
-    return this.productVariantRepository.findOne({
-      where: { id: id },
-      relations: ['product', 'stock', 'images'],
-    });
-  }
-
-  async getVariantById(id: string) {
-    const variant = await this.productVariantRepository.findOne({
-      where: { id: id },
-      relations: ['product', 'stock', 'images'],
-    });
-    if (!variant) {
-      throw new NotFoundException('Product variant not found');
-    }
-
-    // Exclude cost_price from the response
-    const { cost_price, ...variantWithoutCostPrice } = variant;
-    return variantWithoutCostPrice;
-  }
-
-  async getVariantBySlugWithCostPrice(slug: string) {
-    const variant = await this.productVariantRepository.findOne({
-      where: { slug: slug },
-      relations: ['product', 'stock', 'images'],
-    });
-    if (!variant) {
-      throw new NotFoundException('Product variant not found');
-    }
-    return variant;
-  }
-
-  async getVariantBySlug(slug: string) {
-    const variant = await this.productVariantRepository.findOne({
-      where: { slug: slug },
-      relations: ['product', 'stock', 'images'],
-    });
-    if (!variant) {
-      throw new NotFoundException('Product variant not found');
-    }
-    // Exclude cost_price from the response
-    const { cost_price, ...variantWithoutCostPrice } = variant;
-    return variantWithoutCostPrice;
-  }
-
-  async getAllVariantsByProductId(id: string) {
-    const variants = await this.productVariantRepository.find({
-      where: { product: { id: id } },
-      relations: ['product', 'images'],
-    });
-
-    if (!variants || variants.length === 0) {
-      throw new NotFoundException('No variants found for this product');
-    }
-
-    return variants.map((variant) => {
-      const { cost_price, ...variantWithoutCostPrice } = variant;
-      return variantWithoutCostPrice;
-    });
-  }
-
-  async getAllVariantsByProductIdWithCostPrice(id: string) {
-    return await this.productVariantRepository.find({
-      where: { product: { id: id } },
-      relations: ['product', 'images'],
-    });
-  }
-
+  // *************************************** FOR ALL - START ****************************************/
   async search(searchDto: SearchProductVariantRequestDto) {
     const { query, limitProduct, limitVariant } = searchDto;
 
     const productSearch = await this.productRepository.find({
-      where: { name: ILike(`%${query}%`), status: ProductStatus.ACTIVE },
+      where: {
+        name: ILike(`%${query}%`),
+        status: In([ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK]),
+      },
       select: {
         id: true,
         name: true,
@@ -130,7 +74,9 @@ export class ProductVariantService {
     const variantSearch = await this.productVariantRepository.find({
       where: {
         variant_name: ILike(`%${query}%`),
-        product: { status: ProductStatus.ACTIVE },
+        product: {
+          status: In([ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK]),
+        },
       },
       relations: ['product'],
       select: {
@@ -147,9 +93,53 @@ export class ProductVariantService {
     });
   }
 
+  async getVariantBySlug(slug: string) {
+    const variant = await this.productVariantRepository.findOne({
+      where: {
+        slug: slug,
+        product: {
+          status: In([ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK]),
+        },
+      },
+      relations: ['product', 'stock', 'images'],
+    });
+    if (!variant) {
+      throw new NotFoundException('Product variant not found');
+    }
+    // Exclude cost_price from the response
+    const { cost_price, ...variantWithoutCostPrice } = variant;
+    return variantWithoutCostPrice;
+  }
+
+  async getAllVariantsByProductId(id: string) {
+    const variants = await this.productVariantRepository.find({
+      where: {
+        product: {
+          id: id,
+          status: In([ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK]),
+        },
+      },
+      relations: ['product', 'images'],
+    });
+
+    if (!variants || variants.length === 0) {
+      throw new NotFoundException('No variants found for this product');
+    }
+
+    return variants.map((variant) => {
+      const { cost_price, ...variantWithoutCostPrice } = variant;
+      return variantWithoutCostPrice;
+    });
+  }
+
   async getSimilarVariants(variantId: string, limit: number = 8) {
     const currentVariant = await this.productVariantRepository.findOne({
-      where: { id: variantId },
+      where: {
+        id: variantId,
+        product: {
+          status: In([ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK]),
+        },
+      },
       relations: ['product', 'product.category', 'product.brand'],
     });
 
@@ -219,6 +209,43 @@ export class ProductVariantService {
       other_attributes: variant.other_attributes,
       images: variant.images,
     }));
+  }
+  // *************************************** FOR ALL - END ****************************************/
+
+  // *************************************** FOR ADMIN and MANAGER - START ****************************************/
+  async getAllVariantsByProductIdWithCostPrice(id: string) {
+    const variants = await this.productVariantRepository.find({
+      where: { product: { id: id } },
+      relations: ['product', 'images'],
+    });
+    if (!variants || variants.length === 0) {
+      throw new NotFoundException('No variants found for this product');
+    }
+    return variants;
+  }
+
+  async getVariantBySlugWithCostPrice(slug: string) {
+    const variant = await this.productVariantRepository.findOne({
+      where: { slug: slug },
+      relations: ['product', 'stock', 'images'],
+    });
+    if (!variant) {
+      throw new NotFoundException('Product variant not found');
+    }
+    return variant;
+  }
+
+  async getVariantByIdWithCostPrice(id: string) {
+    const variant = await this.productVariantRepository.findOne({
+      where: { id: id },
+      relations: ['product', 'stock', 'images'],
+    });
+    if (!variant) {
+      throw new NotFoundException('Product variant not found');
+    }
+
+    // Exclude cost_price from the response
+    return variant;
   }
 
   async createPhysicalVariant(
@@ -511,57 +538,10 @@ export class ProductVariantService {
     }
   }
 
-  async addingDigitalKeys(variantId: string, file: Express.Multer.File) {
-    const digitalKeys = await processCsvFile(file);
-
-    return await this.dataSource.transaction(async (manager) => {
-      const variant = await manager.findOne(
-        this.productVariantRepository.target,
-        { where: { id: variantId } },
-      );
-
-      if (!variant) {
-        throw new NotFoundException(`Variant with id ${variantId} not found`);
-      }
-
-      const hashesFromFile = digitalKeys.map((k) => k.hash);
-
-      const existingKeys = await manager.find(
-        this.digitalKeyRepository.target,
-        {
-          where: {
-            variant: { id: variantId },
-            hash_key_code: In(hashesFromFile),
-          },
-          select: ['hash_key_code'],
-        },
-      );
-
-      const existingHashes = new Set(existingKeys.map((k) => k.hash_key_code));
-
-      const newKeys = digitalKeys.filter((k) => !existingHashes.has(k.hash));
-
-      const digitalKeyEntities = newKeys.map((key) =>
-        manager.create(this.digitalKeyRepository.target, {
-          hash_key_code: key.hash,
-          key_code: key.encrypted,
-          variant,
-        }),
-      );
-
-      if (digitalKeyEntities.length > 0) {
-        await manager.save(digitalKeyEntities);
-        await manager.increment(
-          this.stockRepository.target,
-          { variant: { id: variantId } },
-          'quantity',
-          digitalKeyEntities.length,
-        );
-      }
-    });
-  }
-
-  async updateVariant(id: string, updateVariantDto: UpdateVariantDto) {
+  async updateVariantProperties(
+    id: string,
+    updateVariantDto: UpdateVariantDto,
+  ) {
     return await this.dataSource.transaction(async (manager) => {
       const variant = await manager.findOne(
         this.productVariantRepository.target,
@@ -619,10 +599,12 @@ export class ProductVariantService {
       throw new BadRequestException('Main image is required');
     }
 
-    await this.supabaseService.uploadProductVariantMainImage(
+    const image_url = await this.supabaseService.uploadProductVariantMainImage(
       mainImage,
       variantId,
     );
+
+    return image_url;
   }
 
   async updateVariantGalleryImages(
@@ -685,6 +667,114 @@ export class ProductVariantService {
     };
   }
 
+  async updatePhysicalStock(variantId: string, quantity: number) {
+    if (quantity < 0) {
+      throw new BadRequestException('Quantity cannot be negative');
+    }
+
+    const stock = await this.stockRepository.findOne({
+      where: {
+        variant: {
+          id: variantId,
+          product: {
+            product_type: In([ProductType.CARD_PHYSICAL, ProductType.DEVICE]),
+          },
+        },
+      },
+      relations: ['variant', 'variant.product'],
+    });
+
+    if (!stock) {
+      throw new NotFoundException(
+        `Stock record not found for physical variant with id ${variantId}`,
+      );
+    }
+
+    stock.quantity = quantity;
+    await this.stockRepository.save(stock);
+
+    const product = stock.variant.product;
+    const otherStocks = await this.stockRepository.find({
+      where: { variant: { product: { id: product.id } } },
+      relations: ['variant'],
+    });
+
+    const totalQuantity = otherStocks.reduce((sum, s) => sum + s.quantity, 0);
+
+    if (totalQuantity === 0 && product.status !== ProductStatus.OUT_OF_STOCK) {
+      product.status = ProductStatus.OUT_OF_STOCK;
+      await this.productRepository.save(product);
+    } else if (
+      totalQuantity > 0 &&
+      product.status === ProductStatus.OUT_OF_STOCK
+    ) {
+      // Trường hợp sản phẩm đã hết hàng nhưng có stock quay lại
+      product.status = ProductStatus.ACTIVE;
+      await this.productRepository.save(product);
+    }
+
+    return stock;
+  }
+
+  async addingDigitalKeys(variantId: string, file: Express.Multer.File) {
+    const digitalKeys = await processCsvFile(file);
+    if (digitalKeys.length === 0) {
+      throw new BadRequestException('No valid keys found in the CSV file');
+    }
+
+    return await this.dataSource.transaction(async (manager) => {
+      const variant = await manager.findOne(
+        this.productVariantRepository.target,
+        { where: { id: variantId } },
+      );
+
+      if (!variant) {
+        throw new NotFoundException(`Variant with id ${variantId} not found`);
+      }
+
+      const hashesFromFile = digitalKeys.map((k) => k.hash);
+
+      const existingKeys = await manager.find(
+        this.digitalKeyRepository.target,
+        {
+          where: {
+            variant: { id: variantId },
+            hash_key_code: In(hashesFromFile),
+          },
+          select: ['hash_key_code'],
+        },
+      );
+
+      const existingHashes = new Set(existingKeys.map((k) => k.hash_key_code));
+
+      const newKeys = digitalKeys.filter((k) => !existingHashes.has(k.hash));
+
+      if (newKeys.length === 0) {
+        throw new BadRequestException(
+          'All digital keys already exist in system!',
+        );
+      }
+
+      const digitalKeyEntities = newKeys.map((key) =>
+        manager.create(this.digitalKeyRepository.target, {
+          hash_key_code: key.hash,
+          key_code: key.encrypted,
+          variant,
+        }),
+      );
+
+      if (digitalKeyEntities.length > 0) {
+        await manager.save(digitalKeyEntities);
+        await manager.increment(
+          this.stockRepository.target,
+          { variant: { id: variantId } },
+          'quantity',
+          digitalKeyEntities.length,
+        );
+      }
+    });
+  }
+
   // DELETE IN DB FIRST THEN DELETE IN SUPABASE
   async deleteImages(listImagesIdRequestDto: ListImagesIdRequestDto) {
     return await this.dataSource.transaction(async (manager) => {
@@ -722,6 +812,86 @@ export class ProductVariantService {
     });
   }
 
+  // *************************************** FOR ADMIN and MANAGER - END ****************************************/
+
+  // *********************************** ADMIN - START ****************************************/
+
+  async getAllDigitalKeys(
+    variantId: string,
+    paginationRequestDto: PaginationRequestDto,
+  ) {
+    const { page, limit, order, sortBy } = paginationRequestDto;
+
+    const variant = await this.productVariantRepository.findOne({
+      where: { id: variantId },
+      relations: ['product'],
+    });
+
+    if (
+      !variant ||
+      variant.product.product_type !== ProductType.CARD_DIGITAL_KEY
+    ) {
+      throw new NotFoundException(`Variant with id ${variantId} not found`);
+    }
+
+    const [digitalKeys, total] = await this.digitalKeyRepository.findAndCount({
+      where: { variant: { id: variantId } },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        [sortBy]: order,
+      },
+    });
+
+    digitalKeys.map((key) => {
+      key.key_code = decryptKeyGame(key.key_code);
+      return key;
+    });
+
+    return PaginationResult(digitalKeys, total, page, limit);
+  }
+
+  async addDigitalKeyByTypeing(variantId: string, keyCode: string) {
+    const variant = await this.productVariantRepository.findOne({
+      where: { id: variantId },
+    });
+
+    if (
+      !variant ||
+      variant.product.product_type !== ProductType.CARD_DIGITAL_KEY
+    ) {
+      throw new NotFoundException(
+        `Variant with id ${variantId} not found or not a digital key variant`,
+      );
+    }
+
+    const existingKey = await this.digitalKeyRepository.findOne({
+      where: {
+        hash_key_code: hashKeyGame(keyCode),
+        variant: { id: variantId },
+      },
+    });
+
+    if (existingKey) {
+      throw new BadRequestException('Digital key already exists');
+    }
+
+    const newKey = this.digitalKeyRepository.create({
+      hash_key_code: hashKeyGame(keyCode),
+      key_code: encryptKeyGame(keyCode),
+      variant,
+    });
+
+    await this.digitalKeyRepository.save(newKey);
+    await this.stockRepository.increment(
+      { variant: { id: variantId } },
+      'quantity',
+      1,
+    );
+
+    return newKey;
+  }
+
   async deleteVariant(id: string) {
     let listVariantImages: string[] = [];
 
@@ -731,6 +901,24 @@ export class ProductVariantService {
           where: { productVariant: { id } },
         });
         listVariantImages = images.map((img) => img.product_url);
+
+        // Check Digital
+        const digitalVariant = await manager.findOne(
+          this.productVariantRepository.target,
+          {
+            where: {
+              id,
+              product: { product_type: ProductType.CARD_DIGITAL_KEY },
+              stock: { quantity: MoreThan(0) },
+            },
+          },
+        );
+
+        if (digitalVariant) {
+          throw new BadRequestException(
+            'Cannot delete digital variant with available stock!',
+          );
+        }
 
         const variant = await manager.findOne(
           this.productVariantRepository.target,
@@ -760,4 +948,37 @@ export class ProductVariantService {
       );
     }
   }
+
+  // *********************************** ADMIN - END ****************************************/
+
+  // *************************************** SUPPORT - START ****************************************/
+  async hasAvailableStock(productId: string) {
+    const variants = await this.stockRepository.find({
+      where: {
+        variant: { product: { id: productId } },
+        quantity: MoreThan(0),
+      },
+    });
+
+    return variants.length > 0;
+  }
+
+  async setAllVariantsToZero(productId: string) {
+    const variants = await this.stockRepository.find({
+      where: {
+        variant: { product: { id: productId } },
+      },
+    });
+
+    if (!variants) {
+      throw new NotFoundException('No variants found for this product');
+    }
+
+    variants.forEach((variant) => {
+      variant.quantity = 0;
+    });
+    await this.stockRepository.save(variants);
+  }
+
+  // *************************************** SUPPORT - END ****************************************/
 }

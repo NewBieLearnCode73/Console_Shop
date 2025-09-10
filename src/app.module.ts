@@ -12,6 +12,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { CartModule } from './modules/cart/cart.module';
 import { KafkaModule } from './modules/kafka/kafka.module';
 import { MomoModule } from './modules/momo/momo.module';
+import { GiaohangnhanhModule } from './modules/giaohangnhanh/giaohangnhanh.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { MomoModule } from './modules/momo/momo.module';
     CartModule,
     KafkaModule,
     MomoModule,
+    GiaohangnhanhModule,
   ],
   controllers: [],
   providers: [],

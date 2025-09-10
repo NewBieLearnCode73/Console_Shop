@@ -11,7 +11,7 @@ export class SupabaseService {
   constructor(
     private readonly supabaseClient: SupabaseClient,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   private get BASE_URL(): string {
     return this.configService.getOrThrow('SUPABASE_BASE_STORAGE_URL');
@@ -90,6 +90,8 @@ export class SupabaseService {
     const { data: publicUrlData } = this.supabaseClient.storage
       .from('product_variant_images')
       .getPublicUrl(uploadData.path);
+
+    console.log('Public URL:', publicUrlData.publicUrl);
 
     return publicUrlData.publicUrl;
   }

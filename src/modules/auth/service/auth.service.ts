@@ -29,15 +29,12 @@ export class AuthService {
     private readonly configService: ConfigService,
     @InjectRedis()
     private readonly redis: Redis,
-  ) {}
-
+  ) { }
   getTTLToken(token: string): number {
     try {
       if (!token) return 0;
 
-      const decodeToken = this.jwtService.decode(token) as JwtPayload & {
-        exp?: number;
-      };
+      const decodeToken = this.jwtService.decode(token);
 
       if (!decodeToken?.exp) return 0;
 
@@ -290,10 +287,12 @@ export class AuthService {
     };
   }
 
-  async logout(accessToken: string, refreshToken: string, userId: string) {
-    if (!accessToken || !refreshToken || !userId) {
-      throw new UnauthorizedException('Missing tokens or user ID for logout');
+  async logout(accessToken: string, refreshToken: string) {
+    if (!accessToken || !refreshToken) {
+      throw new UnauthorizedException('Missing tokens for logout');
     }
+
+    const userId = await this.redis.get(`ACCESS_TOKEN:${accessToken}`) || "";
 
     const accessTokenTtl = this.getTTLToken(accessToken);
     const refreshTokenTtl = this.getTTLToken(refreshToken);
@@ -442,6 +441,26 @@ export class AuthService {
     const hashedPassword = await this.hashPassword(newPassword);
     user.password = hashedPassword;
 
+    await this.userRepository.save(user);
+  }
+
+  async changePasswordWithOldPassword(
+    oldPassword: string,
+    newPassword: string,
+    userId: string,
+  ) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Old password is incorrect.');
+    }
+
+    const hashedPassword = await this.hashPassword(newPassword);
+    user.password = hashedPassword;
     await this.userRepository.save(user);
   }
 }

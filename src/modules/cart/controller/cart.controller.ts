@@ -10,19 +10,22 @@ import {
 } from '@nestjs/common';
 import { CartService } from '../service/cart.service';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
-import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
   AddItemToCartRequestDto,
   RemoveItemFromCartRequestDto,
 } from '../dto/request/cart-request.dto';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/carts')
 export class CartController {
-  constructor(private readonly cartService: CartService) {}
+  constructor(private readonly cartService: CartService) { }
 
+  // THÊM ENDPOINTS PUT -  Thêm sản phẩm vào giỏ hàng
+
+  // Sửa lại giỏ hàng - Sản phẩm bị inactive hoặc hết hàng
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async getCart(
     @Req() req: AuthenticationRequest,
     @Query() paginationRequestDto: PaginationRequestDto,
@@ -30,8 +33,9 @@ export class CartController {
     return this.cartService.getCart(req.user.id, paginationRequestDto);
   }
 
+  // SỬA LẠI SẢN PHẨM TRONG GIỎ HÀNG - SẢN PHẨM BỊ INACTIVE HOẶC HẾT HÀNG
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async addToCart(
     @Req() req: AuthenticationRequest,
     @Body() addItemToCartRequestDto: AddItemToCartRequestDto,
@@ -44,7 +48,7 @@ export class CartController {
   }
 
   @Delete()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async removeFromCart(
     @Req() req: AuthenticationRequest,
     @Query() removeItemFromCartRequestDto: RemoveItemFromCartRequestDto,
@@ -57,7 +61,7 @@ export class CartController {
   }
 
   @Delete('clean-cart')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async clearCart(@Req() req: AuthenticationRequest) {
     return this.cartService.clearCart(req.user.id);
   }

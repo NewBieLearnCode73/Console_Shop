@@ -44,7 +44,11 @@ export class CustomFacebookStrategy extends PassportStrategy(Strategy) {
       });
 
       done(null, user);
+    } else {
+      if (!user?.is_active) {
+        await this.userService.activeUserById(user?.id);
+      }
+      return done(null, user);
     }
-    return done(null, user);
   }
 }

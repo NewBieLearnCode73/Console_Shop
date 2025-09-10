@@ -23,6 +23,16 @@ export class ResetPasswordDto {
   email: string;
 }
 
+export class ChangePasswordWithOldPasswordDto {
+  @IsNotEmpty()
+  @Length(6, 20)
+  oldPassword: string;
+
+  @IsNotEmpty()
+  @Length(6, 20)
+  newPassword: string;
+}
+
 export class ChangePasswordDto {
   @IsNotEmpty()
   @Length(6, 20)

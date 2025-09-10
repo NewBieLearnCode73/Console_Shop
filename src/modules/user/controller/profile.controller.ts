@@ -10,28 +10,28 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ProfileService } from '../service/profile.service';
-import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   CreateProfileRequestDto,
   UpdateProfileRequestDto,
 } from '../dto/request/profile-request.dto';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/profiles')
 export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
+  constructor(private readonly profileService: ProfileService) { }
 
-  // GET PROFILE BY JWT
+  // GET PROFILE
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async getProfile(@Request() req: AuthenticationRequest) {
     return this.profileService.getProfile(req.user.id);
   }
 
-  // CREATE PROFILE BY JWT (Not include image)
+  // CREATE PROFILE (Not include image)
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async createProfile(
     @Body() createProfileDto: CreateProfileRequestDto,
     @Request() req: AuthenticationRequest,
@@ -42,7 +42,7 @@ export class ProfileController {
   // UPLOAD IMAGE
   @Post('update-image')
   @UseInterceptors(FileInterceptor('file'))
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async updateImage(
     @Request() req: AuthenticationRequest,
     @UploadedFile() file: Express.Multer.File,
@@ -52,7 +52,7 @@ export class ProfileController {
 
   // Update profile (Not include image)
   @Patch()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async updateProfile(
     @Body() updateProfileDto: UpdateProfileRequestDto,
     @Request() req: AuthenticationRequest,

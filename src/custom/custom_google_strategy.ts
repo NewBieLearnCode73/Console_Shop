@@ -39,7 +39,11 @@ export class CustomGoogleStrategy extends PassportStrategy(Strategy) {
         fullname: displayName,
       });
       done(null, user);
+    } else {
+      if (!user?.is_active) {
+        await this.userService.activeUserById(user?.id);
+      }
+      return done(null, user);
     }
-    return done(null, user);
   }
 }

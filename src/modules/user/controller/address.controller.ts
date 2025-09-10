@@ -9,7 +9,6 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/guards/jwt_auth.guard';
 import { AddressService } from '../service/address.service';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
@@ -18,14 +17,15 @@ import {
   UpdateAddressRequestDto,
 } from '../dto/request/address-request.dto';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/addresses')
 export class AddresController {
-  constructor(private readonly addressService: AddressService) {}
+  constructor(private readonly addressService: AddressService) { }
 
-  // GET ALL ADDRESS BASE ON JWT
+  // GET ALL
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async getAllAddress(
     @Request() req: AuthenticationRequest,
     @Query() paginationRequestDto: PaginationRequestDto,
@@ -36,16 +36,16 @@ export class AddresController {
     );
   }
 
-  // GET DEFAULT ADDRESS BASE ON JWT
+  // GET DEFAULT
   @Get('default')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async getDefaultAddress(@Request() req: AuthenticationRequest) {
     return this.addressService.getDefaultAddressByUserId(req.user.id);
   }
 
-  // CREATE NEW USER ADDRESS BASE ON JWT
+  // CREATE NEW ADRESS
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async createNewAddress(
     @Body() createAddressRequestDto: CreateAddressRequestDto,
     @Request() req: AuthenticationRequest,
@@ -56,9 +56,9 @@ export class AddresController {
     );
   }
 
-  // UPDATE USER ADDRESS BASE ON JWT
+  // UPDATE USER ADDRESS
   @Patch('update/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async updateUserAddress(
     @Request() req: AuthenticationRequest,
     @Param('id') addressId: string,
@@ -71,9 +71,9 @@ export class AddresController {
     );
   }
 
-  // SET DEFAULT ADDRESS BASE ON JWT
+  // SET DEFAULT ADDRESS
   @Patch('set-default')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtCookieAuthGuard)
   async setDefaultAddress(
     @Request() req: AuthenticationRequest,
     @Body() setDefaultAddressRequestDto: setDefaultAddressRequestDto,

@@ -32,18 +32,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // app.connectMicroservice<MicroserviceOptions>({
-  //   transport: Transport.KAFKA,
-  //   options: {
-  //     client: {
-  //       brokers: ['localhost:9092'],
-  //     },
-  //     consumer: {
-  //       groupId: 'my-app-consumer',
-  //     },
-  //   },
-  // });
-
   // Connect Kafka microservice async
   const kafkaMicroservice = app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
@@ -72,9 +60,6 @@ async function bootstrap() {
     }
   };
 
-  // await app.startAllMicroservices().then(() => {
-  //   console.log('Microservices are listening');
-  // });
   await startKafka(); // chạy async, không block API
 }
 bootstrap();

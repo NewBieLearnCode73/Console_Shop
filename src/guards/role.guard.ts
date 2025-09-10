@@ -5,7 +5,7 @@ import { ROLE_KEY } from 'src/decorators/role_decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     // Get role in Guard
@@ -21,6 +21,7 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
+    console.log('User role: ', user.role);
     return requireRole.includes(user.role);
   }
 }

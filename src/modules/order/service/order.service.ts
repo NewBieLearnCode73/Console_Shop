@@ -19,6 +19,7 @@ import { Redis } from 'ioredis';
 import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
 import { KeyStatus } from 'src/constants/key_status.enum';
 import { decryptKeyGame } from 'src/utils/crypto_helper';
+import { ProductStatus } from 'src/constants/product_status.enum';
 
 @Injectable()
 export class OrderService {
@@ -41,19 +42,17 @@ export class OrderService {
     private readonly dataSource: DataSource,
 
     @InjectRedis() private readonly redis: Redis,
-  ) {}
+  ) { }
   // Get digital keys for an order
   async getDigitalKeys(userId: string, orderId: string) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId, user: { id: userId } },
       relations: ['orderItems', 'orderItems.digitalKey'],
     });
-    if (!order)
-      throw new BadRequestException('Order not found! Or not your order');
+    if (!order) throw new BadRequestException('Order not found! Or not your order');
     if (order.order_type !== OrderType.DIGITAL)
       throw new BadRequestException('Not a digital product order!');
-    if (order.status !== OrderStatus.COMPLETED)
-      throw new BadRequestException('Order is not paid!');
+    if (order.status !== OrderStatus.COMPLETED) throw new BadRequestException('Order is not paid!');
 
     // Return only items with digital keys
     const digital_key = order.orderItems
@@ -72,19 +71,19 @@ export class OrderService {
   ) {
     const { productVariantId } = orderDigitalBuyNowRequestDto;
     const productVariant = await this.productVariantRepository.findOne({
-      where: { id: productVariantId },
+      where: {
+        id: productVariantId,
+        product: { status: ProductStatus.ACTIVE },
+      },
       relations: ['product'],
     });
 
+    if (!productVariant) throw new BadRequestException('Product variant not found or inactive!');
+
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new BadRequestException('User not found!');
-    if (
-      !productVariant ||
-      productVariant.product.product_type !== ProductType.CARD_DIGITAL_KEY
-    )
-      throw new BadRequestException(
-        'Product variant not found or invalid digital product!',
-      );
+    if (!productVariant || productVariant.product.product_type !== ProductType.CARD_DIGITAL_KEY)
+      throw new BadRequestException('Product variant not found or invalid digital product!');
 
     const savedOrder = await this.dataSource.transaction(async (manager) => {
       const stock = await manager
@@ -95,16 +94,10 @@ export class OrderService {
         .andWhere('variant.id = :variantId', { variantId: productVariantId })
         .getOne();
 
-      if (!stock)
-        throw new BadRequestException(
-          'Stock information not found for product variant!',
-        );
+      if (!stock) throw new BadRequestException('Stock information not found for product variant!');
 
       const available = stock.quantity - stock.reserved;
-      if (available <= 0)
-        throw new BadRequestException(
-          'Insufficient stock for product variant!',
-        );
+      if (available <= 0) throw new BadRequestException('Insufficient stock for product variant!');
 
       stock.reserved += 1;
       await manager.getRepository(Stock).save(stock);
@@ -118,8 +111,7 @@ export class OrderService {
         },
       });
 
-      if (!availableKey)
-        throw new BadRequestException('No available digital keys in stock!');
+      if (!availableKey) throw new BadRequestException('No available digital keys in stock!');
 
       const orderItem = await manager.getRepository(OrderItem).save({
         quantity: 1,
@@ -155,7 +147,7 @@ export class OrderService {
 
       setTimeout(
         async () => {
-          await this.autoCancelOnlineOrder(savedOrder.id);
+          await this.autoFailedOrder(savedOrder.id);
         },
         100 * 60 * 1000,
       );
@@ -167,7 +159,7 @@ export class OrderService {
   }
 
   // Cancel order
-  async autoCancelOnlineOrder(orderId: string) {
+  async autoFailedOrder(orderId: string) {
     try {
       await this.dataSource.transaction(async (manager) => {
         const order = await manager.getRepository(Order).findOne({
@@ -203,7 +195,7 @@ export class OrderService {
             }
           }
 
-          order.status = OrderStatus.CANCELED;
+          order.status = OrderStatus.FAILED;
           order.cancelled_at = new Date();
           await manager.getRepository(Order).save(order);
 
@@ -227,7 +219,7 @@ export class OrderService {
     });
 
     for (const order of expiredOrder) {
-      await this.autoCancelOnlineOrder(order.id);
+      await this.autoFailedOrder(order.id);
     }
   }
 }

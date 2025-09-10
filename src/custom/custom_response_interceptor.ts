@@ -1,16 +1,9 @@
-import {
-  CallHandler,
-  ExecutionContext,
-  Injectable,
-  NestInterceptor,
-} from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
 import { AbstractResponse } from 'src/abstracts/abstract_response';
 
 @Injectable()
-export class CustomResponseInterceptor<T>
-  implements NestInterceptor<T, AbstractResponse<T>>
-{
+export class CustomResponseInterceptor<T> implements NestInterceptor<T, AbstractResponse<T>> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,

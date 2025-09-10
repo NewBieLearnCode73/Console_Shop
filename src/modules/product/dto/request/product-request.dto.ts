@@ -43,9 +43,6 @@ export class UpdateProductRequestDto {
   @IsString()
   description?: string;
 
-  @IsEnum(ProductType)
-  product_type?: ProductType;
-
   @IsString()
   seo_title?: string;
 
@@ -65,7 +62,7 @@ export class UpdateProductStatusRequestDto {
   status: ProductStatus;
 }
 
-export class SearchProductRequestDto {
+export class FilterProductRequestDto {
   @IsString()
   @IsOptional()
   categorySlug?: string;

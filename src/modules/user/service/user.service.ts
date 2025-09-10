@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { User } from '../entity/user.entity';
@@ -12,13 +13,16 @@ import { isUUID } from 'class-validator';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { UserWithProfileResponseDto } from '../dto/response/user-response.dto';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+    @InjectRedis() private readonly redis: Redis,
+  ) { }
 
   async findUserWithProfile(userId: string) {
     if (!isUUID(userId)) {
@@ -162,6 +166,7 @@ export class UserService {
     }
 
     user.is_active = true;
+
     const updateUser = await this.userRepository.save(user);
     const { password, ...result } = updateUser;
 
@@ -193,11 +198,59 @@ export class UserService {
     return result;
   }
 
-  async changeUserRoleById(userId: string, role: Role) {
+  async inactiveUserById(access_token, userId: string) {
     if (!isUUID(userId)) {
       throw new BadRequestException('UUID is not accepted!');
     }
 
+    // Verify access token
+    if (!access_token) {
+      throw new BadRequestException('Access token is required!');
+    }
+    const userIdFromToken = await this.redis.get(
+      `ACCESS_TOKEN:${access_token}`,
+    );
+
+    if (!userIdFromToken) {
+      throw new UnauthorizedException('Invalid access token!');
+    }
+
+    if (userIdFromToken === userId) {
+      throw new BadRequestException('Cannot inactive yourself!');
+    }
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found!`);
+    }
+    if (user.is_active === false) {
+      throw new ConflictException(`User with id ${userId} was inactived!`);
+    }
+    user.is_active = false;
+    const updateUser = await this.userRepository.save(user);
+    const { password, ...result } = updateUser;
+
+    return result;
+  }
+
+  async changeUserRoleById(access_token: string, userId: string, role: Role) {
+    if (!isUUID(userId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
+    // Verify access token
+    if (!access_token) {
+      throw new BadRequestException('Access token is required!');
+    }
+
+    const userIdFromToken = await this.redis.get(
+      `ACCESS_TOKEN:${access_token}`,
+    );
+    if (!userIdFromToken) {
+      throw new UnauthorizedException('Invalid access token!');
+    }
+    if (userIdFromToken === userId) {
+      throw new BadRequestException('Cannot change your own role!');
+    }
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found!`);

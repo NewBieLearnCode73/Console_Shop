@@ -12,6 +12,7 @@ export class ProductResponseDto {
   seo_description?: string;
   category_id: string;
   brand_id: string;
+  image: string;
 }
 
 export class SearchProductResponseDto {

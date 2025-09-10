@@ -17,23 +17,23 @@ import { FacebookOAuthGuard } from 'src/guards/facebook_oauth.guard';
 import {
   ActiveAccountRequestDto,
   ChangePasswordDto,
-  provideNewPairTokenDto,
+  ChangePasswordWithOldPasswordDto,
   registerRequestDto,
   ResetPasswordDto,
 } from '../dto/request/auth-request.dto';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type {
   Request as ExpressRequest,
   Response as ExpressResponse,
 } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
@@ -59,13 +59,6 @@ export class AuthController {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      res.cookie('user_id', req.user.id, {
-        httpOnly: true,
-        sameSite: 'none',
-        secure: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
       return res.status(200).send({ message: 'Login successful' });
     } catch (error) {
       console.error('Local login error:', error);
@@ -78,11 +71,35 @@ export class AuthController {
     return this.authService.register(registerRequestDto);
   }
 
-  @Post('provide-new-pair-token')
-  async provideToken(@Body() provideNewPairTokenDto: provideNewPairTokenDto) {
-    return this.authService.provideTokenPair(
-      provideNewPairTokenDto.refreshToken,
+  @Get('provide-new-pair-token')
+  @UseGuards(JwtCookieAuthGuard)
+  async provideToken(@Req() req: ExpressRequest) {
+    const tokens = await this.authService.provideTokenPair(
+      req.cookies['refresh_token'],
     );
+
+    try {
+      const access_token = tokens.access_token;
+      const refresh_token = tokens.refresh_token;
+      // Set cookies
+      req.res?.cookie('access_token', access_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
+      req.res?.cookie('refresh_token', refresh_token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      return { message: 'Provide new pair token successful' };
+    } catch (error) {
+      console.error('Provide new pair token error:', error);
+      return { message: 'Provide new pair token failed', error: error };
+    }
   }
 
   @Get('provide-new-access-token')
@@ -117,9 +134,8 @@ export class AuthController {
     try {
       const access_token = req.cookies['access_token'];
       const refresh_token = req.cookies['refresh_token'];
-      const user_id = req.cookies['user_id'];
 
-      await this.authService.logout(access_token, refresh_token, user_id);
+      await this.authService.logout(access_token, refresh_token);
 
       res.clearCookie('access_token', {
         httpOnly: true,
@@ -131,16 +147,24 @@ export class AuthController {
         sameSite: 'none',
         secure: true,
       });
-      res.clearCookie('user_id', {
-        httpOnly: true,
-        sameSite: 'none',
-        secure: true,
-      });
 
       return res.status(200).send({ message: 'Logout successful' });
     } catch (error) {
       return res.status(500).send({ message: 'Logout failed', error: error });
     }
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtCookieAuthGuard)
+  async changePassword(
+    @Body() changePasswordWithOldPasswordDto: ChangePasswordWithOldPasswordDto,
+    @Req() req: AuthenticationRequest,
+  ) {
+    return this.authService.changePasswordWithOldPassword(
+      changePasswordWithOldPasswordDto.oldPassword,
+      changePasswordWithOldPasswordDto.newPassword,
+      req.user.id,
+    );
   }
 
   @Post('active-account-request')
@@ -159,8 +183,6 @@ export class AuthController {
   }
 
   @Post('reset-password-request')
-  @UseGuards(ThrottlerGuard)
-  // @Throttle('reset-password-request') // 3 requests per hour
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return await this.authService.sendResetPasswordEmail(
       resetPasswordDto.email,
@@ -180,10 +202,19 @@ export class AuthController {
     );
   }
 
+  // ********************* GET ROLE OF USER  ****************************//
+
+  @Get('role')
+  @UseGuards(JwtCookieAuthGuard)
+  getRole(@Req() req: AuthenticationRequest) {
+    return { role: req.user.role };
+  }
+
+  //********************* OAUTH LOGIN START ****************************//
   // Login with google
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
-  async googleLogin() {}
+  async googleLogin() { }
 
   @Get('/oauth2/callback/google')
   @UseGuards(GoogleOAuthGuard)
@@ -208,13 +239,6 @@ export class AuthController {
         secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
-      res.cookie('user_id', req.user.id, {
-        httpOnly: true,
-        sameSite: 'none',
-        secure: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
       // Response
       // res.redirect(this.configService.getOrThrow('FRONTEND_URL'));
       res.send(`
@@ -248,7 +272,7 @@ export class AuthController {
   // Login with facebook
   @Get('facebook')
   @UseGuards(FacebookOAuthGuard)
-  async facebookLogin() {}
+  async facebookLogin() { }
 
   @Get('oauth2/callback/facebook')
   @UseGuards(FacebookOAuthGuard)
@@ -271,12 +295,6 @@ export class AuthController {
         secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
-      res.cookie('user_id', req.user.id, {
-        httpOnly: true,
-        sameSite: 'none',
-        secure: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
 
       // Response
       res.redirect(this.configService.getOrThrow('FRONTEND_URL'));
@@ -285,4 +303,6 @@ export class AuthController {
       console.error('Facebook login error:', error);
     }
   }
+
+  //********************* OAUTH LOGIN END ****************************//
 }

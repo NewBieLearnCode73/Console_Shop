@@ -1,11 +1,5 @@
 import { AbstractEntity } from 'src/abstracts/abstract_entity';
-import {
-  Column,
-  Entity,
-  ManyToOne,
-  OneToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Order } from './order.entity';
 import { ProductVariant } from 'src/modules/product/entity/product_variant.entity';
 import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';

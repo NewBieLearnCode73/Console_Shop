@@ -12,18 +12,11 @@ import { Product } from '../product/entity/product.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Cart,
-      CartItem,
-      User,
-      ProductVariant,
-      Stock,
-      Product,
-    ]),
+    TypeOrmModule.forFeature([Cart, CartItem, User, ProductVariant, Stock, Product]),
     ConfigModule,
   ],
   providers: [CartService],
   controllers: [CartController],
   exports: [],
 })
-export class CartModule {}
+export class CartModule { }

@@ -24,3 +24,17 @@ export async function MomoCallingHelper(path: string, requestBody: any) {
   const response = await axiosInstant.post(path, requestBody);
   return response;
 }
+
+export async function GiaoHangNhanhHelper(path: string, requestBody: any) {
+  const axiosInstant = axios.create({
+    baseURL: process.env.GHN_BASE_URL,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Token: process.env.GHN_TOKEN,
+      ShopId: process.env.GHN_SHOP_ID,
+    },
+  });
+  const response = await axiosInstant.post(path, requestBody);
+  return response;
+}

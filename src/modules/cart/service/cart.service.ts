@@ -10,6 +10,7 @@ import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { Stock } from 'src/modules/product/entity/stock.entity';
 import { Product } from 'src/modules/product/entity/product.entity';
 import { ProductType } from 'src/constants/product_type.enum';
+import { ProductStatus } from 'src/constants/product_status.enum';
 
 @Injectable()
 export class CartService {
@@ -46,11 +47,15 @@ export class CartService {
     quantity: number,
   ) {
     const productVariant = await this.productVariantRepository.findOne({
-      where: { id: productVariantId },
+      where: {
+        id: productVariantId,
+        product: { status: ProductStatus.ACTIVE },
+      },
+      relations: ['product'],
     });
 
     if (!productVariant) {
-      throw new BadRequestException('Product variant not found');
+      throw new BadRequestException('Product variant not found or Inactive!');
     }
 
     const productOfVariant = await this.productRepository.findOne({

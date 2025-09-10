@@ -12,6 +12,7 @@ import {
   BadRequestException,
   Patch,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ProductVariantService } from '../service/product_variant.service';
@@ -25,31 +26,32 @@ import {
   UpdateVariantDto,
 } from '../dto/request/product_variant-request.dto';
 import { ListImagesIdRequestDto } from '../dto/request/product_image-request.dto';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
+import { RolesDecorator } from 'src/decorators/role_decorator';
+import { Role } from 'src/constants/role.enum';
+import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
+import { RolesGuard } from 'src/guards/role.guard';
 
 @Controller('api/product-variants')
 export class ProductVariantController {
-  constructor(private readonly productVariantService: ProductVariantService) {}
+  constructor(private readonly productVariantService: ProductVariantService) { }
 
-  // Search
-  @Get('search')
+  //*************************************** FOR ALL - START ****************************************/
+
+  // Search by name of variant or product (OUT_OF_STOCK and ACTIVE products only)
+  @Get('/for-users-and-guests/search')
   async searchVariants(@Query() searchDto: SearchProductVariantRequestDto) {
     return await this.productVariantService.search(searchDto);
   }
 
-  // Get variant by slug
-  @Get('/slug/:slug')
+  // Get variant by slug (OUT_OF_STOCK and ACTIVE products only)
+  @Get('/for-users-and-guests/slug/:slug')
   async getVariantBySlug(@Param('slug') slug: string) {
     return await this.productVariantService.getVariantBySlug(slug);
   }
 
-  // Get variant by slug with cost price
-  @Get('/slug-with-cost-price/:slug')
-  async getVariantBySlugWithCostPrice(@Param('slug') slug: string) {
-    return await this.productVariantService.getVariantBySlugWithCostPrice(slug);
-  }
-
   // Get all variants by product id
-  @Get('product/:productId')
+  @Get('/for-users-and-guests/product/:productId')
   async getVariantsByProduct(
     @Param('productId', ParseUUIDPipe) productId: string,
   ) {
@@ -58,18 +60,8 @@ export class ProductVariantController {
     );
   }
 
-  // Get all variants by product id with cost price
-  @Get('product-with-cost-price/:productId')
-  async getVariantsByProductWithCostPrice(
-    @Param('productId', ParseUUIDPipe) productId: string,
-  ) {
-    return await this.productVariantService.getAllVariantsByProductIdWithCostPrice(
-      productId,
-    );
-  }
-
   // Get similar variants by variant id
-  @Get(':id/similar')
+  @Get('/for-users-and-guests/similar/:id')
   async getSimilarVariants(
     @Param('id', ParseUUIDPipe) variantId: string,
     @Query('limit') limit?: string,
@@ -81,15 +73,35 @@ export class ProductVariantController {
     );
   }
 
-  // Get variant by id
-  @Get(':id')
-  async getVariant(@Param('id', ParseUUIDPipe) variantId: string) {
-    return await this.productVariantService.getVariantById(variantId);
+  //*************************************** FOR ALL - END ******************************************/
+
+  // *************************************** FOR ADMIN and MANAGER - START ****************************************/
+
+  // Get all variants by product id with cost price
+  @Get('/productId-with-cost-price/:productId')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async getAllVariantsByProductIdWithCostPrice(
+    @Param('productId', ParseUUIDPipe) productId: string,
+  ) {
+    return await this.productVariantService.getAllVariantsByProductIdWithCostPrice(
+      productId,
+    );
   }
 
-  // Get variant by id with cost price
-  @Get(':id/with-cost-price')
-  async getVariantWithCostPrice(@Param('id', ParseUUIDPipe) variantId: string) {
+  // Get variant by slug with cost price
+  @Get('/slug-with-cost-price/:slug')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async getVariantBySlugWithCostPrice(@Param('slug') slug: string) {
+    return await this.productVariantService.getVariantBySlugWithCostPrice(slug);
+  }
+
+  // Get variant by id
+  @Get('/variantId-with-cost-price/:id')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async getVariant(@Param('id', ParseUUIDPipe) variantId: string) {
     return await this.productVariantService.getVariantByIdWithCostPrice(
       variantId,
     );
@@ -97,6 +109,8 @@ export class ProductVariantController {
 
   // Create physical variant
   @Post('physical')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -148,6 +162,8 @@ export class ProductVariantController {
 
   // Create digital variant with digital keys CSV upload
   @Post('digital')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -205,11 +221,13 @@ export class ProductVariantController {
 
   // Update variant properties
   @Put(':id')
-  async updateVariant(
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async updateVariantProperties(
     @Param('id', ParseUUIDPipe) variantId: string,
     @Body() updateVariantDto: UpdateVariantDto,
   ) {
-    return await this.productVariantService.updateVariant(
+    return await this.productVariantService.updateVariantProperties(
       variantId,
       updateVariantDto,
     );
@@ -217,6 +235,8 @@ export class ProductVariantController {
 
   // Update variant main image
   @Put(':id/main-image')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   @UseInterceptors(
     FileFieldsInterceptor([{ name: 'main_image', maxCount: 1 }], {
       limits: {
@@ -256,6 +276,8 @@ export class ProductVariantController {
 
   // Update variant gallery image
   @Put(':id/gallery-images')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   @UseInterceptors(
     FileFieldsInterceptor([{ name: 'gallery_images', maxCount: 3 }], {
       limits: {
@@ -291,15 +313,33 @@ export class ProductVariantController {
       gallery_images: Express.Multer.File[];
     },
   ) {
-    return await this.productVariantService.updateVariantGalleryImages(
+    const result = await this.productVariantService.updateVariantGalleryImages(
       variantId,
       listKeepUrlImagesRequestDto,
       files.gallery_images,
     );
+
+    return result;
   }
 
-  // Add more digital keys
+  // Update variant stock (only for physical product)
+  @Patch(':id/physical/stock')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async updatePhysicalStock(
+    @Param('id', ParseUUIDPipe) variantId: string,
+    @Body('quantity') quantity: number,
+  ) {
+    return await this.productVariantService.updatePhysicalStock(
+      variantId,
+      quantity,
+    );
+  }
+
+  // Add more digital keys (CSV upload)
   @Patch(':id/digital-keys')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   @UseInterceptors(
     FileFieldsInterceptor([{ name: 'digital_keys_csv', maxCount: 1 }], {
       limits: {
@@ -327,18 +367,55 @@ export class ProductVariantController {
     );
   }
 
-  // Delete variant
-  @Delete(':id')
-  async deleteVariant(@Param('id', ParseUUIDPipe) variantId: string) {
-    await this.productVariantService.deleteVariant(variantId);
-  }
-
   // Take all url images:
   // https://dvdlrexmnottnuisgfpn.supabase.co/storage/v1/object/public/product_variant_images/d63af260-3944-415f-af40-806d56df0088/gallery_1756112022856
   // https://dvdlrexmnottnuisgfpn.supabase.co/storage/v1/object/public/product_variant_images/d63af260-3944-415f-af40-806d56df0088/gallery_1756112022856
   // https://dvdlrexmnottnuisgfpn.supabase.co/storage/v1/object/public/product_variant_images/d63af260-3944-415f-af40-806d56df0088/gallery_1756112022856
   @Delete('images')
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   async deleteImages(@Body() listImageRequestDto: ListImagesIdRequestDto) {
     await this.productVariantService.deleteImages(listImageRequestDto);
   }
+
+  // *************************************** FOR ADMIN and MANAGER - END ******************************************/
+
+  //*************************************** FOR ADMIN - START ***********************************************/
+
+  @Get('getAllDigitalKeys/:variantId')
+  @RolesDecorator([Role.ADMIN])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async getAllDigitalKeys(
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+    @Query() paginationRequestDto: PaginationRequestDto,
+  ) {
+    return await this.productVariantService.getAllDigitalKeys(
+      variantId,
+      paginationRequestDto,
+    );
+  }
+
+  @Put('digital-key/:variantId')
+  @RolesDecorator([Role.ADMIN])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async addDigitalKeyByTyping(
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+    @Body('keyCode') keyCode: string,
+  ) {
+    const newKey = await this.productVariantService.addDigitalKeyByTypeing(
+      variantId,
+      keyCode,
+    );
+    return newKey;
+  }
+
+  // Delete variant
+  @Delete(':id')
+  @RolesDecorator([Role.ADMIN])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async deleteVariant(@Param('id', ParseUUIDPipe) variantId: string) {
+    await this.productVariantService.deleteVariant(variantId);
+  }
+
+  //*************************************** FOR ADMIN - END *************************************************/
 }
