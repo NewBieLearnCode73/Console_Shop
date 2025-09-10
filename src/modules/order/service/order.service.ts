@@ -49,10 +49,12 @@ export class OrderService {
       where: { id: orderId, user: { id: userId } },
       relations: ['orderItems', 'orderItems.digitalKey'],
     });
-    if (!order) throw new BadRequestException('Order not found! Or not your order');
+    if (!order)
+      throw new BadRequestException('Order not found! Or not your order');
     if (order.order_type !== OrderType.DIGITAL)
       throw new BadRequestException('Not a digital product order!');
-    if (order.status !== OrderStatus.COMPLETED) throw new BadRequestException('Order is not paid!');
+    if (order.status !== OrderStatus.COMPLETED)
+      throw new BadRequestException('Order is not paid!');
 
     // Return only items with digital keys
     const digital_key = order.orderItems
@@ -78,12 +80,18 @@ export class OrderService {
       relations: ['product'],
     });
 
-    if (!productVariant) throw new BadRequestException('Product variant not found or inactive!');
+    if (!productVariant)
+      throw new BadRequestException('Product variant not found or inactive!');
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new BadRequestException('User not found!');
-    if (!productVariant || productVariant.product.product_type !== ProductType.CARD_DIGITAL_KEY)
-      throw new BadRequestException('Product variant not found or invalid digital product!');
+    if (
+      !productVariant ||
+      productVariant.product.product_type !== ProductType.CARD_DIGITAL_KEY
+    )
+      throw new BadRequestException(
+        'Product variant not found or invalid digital product!',
+      );
 
     const savedOrder = await this.dataSource.transaction(async (manager) => {
       const stock = await manager
@@ -94,10 +102,16 @@ export class OrderService {
         .andWhere('variant.id = :variantId', { variantId: productVariantId })
         .getOne();
 
-      if (!stock) throw new BadRequestException('Stock information not found for product variant!');
+      if (!stock)
+        throw new BadRequestException(
+          'Stock information not found for product variant!',
+        );
 
       const available = stock.quantity - stock.reserved;
-      if (available <= 0) throw new BadRequestException('Insufficient stock for product variant!');
+      if (available <= 0)
+        throw new BadRequestException(
+          'Insufficient stock for product variant!',
+        );
 
       stock.reserved += 1;
       await manager.getRepository(Stock).save(stock);
@@ -111,7 +125,8 @@ export class OrderService {
         },
       });
 
-      if (!availableKey) throw new BadRequestException('No available digital keys in stock!');
+      if (!availableKey)
+        throw new BadRequestException('No available digital keys in stock!');
 
       const orderItem = await manager.getRepository(OrderItem).save({
         quantity: 1,

@@ -10,6 +10,7 @@ import { Order } from '../order/entity/order.entity';
 import { OrderModule } from '../order/order.module';
 import { Stock } from '../product/entity/stock.entity';
 import { DigitalKey } from '../product/entity/digital_key.entity';
+import { PaymentConsumer } from './controller/payment.consumer';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { DigitalKey } from '../product/entity/digital_key.entity';
     KafkaModule,
     OrderModule,
   ],
-  controllers: [PaymentController],
+  controllers: [PaymentController, PaymentConsumer],
   providers: [PaymentService, KafkaService],
 })
-export class PaymentModule {}
+export class PaymentModule { }

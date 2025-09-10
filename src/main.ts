@@ -32,8 +32,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Connect Kafka microservice async
-  const kafkaMicroservice = app.connectMicroservice<MicroserviceOptions>({
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
       client: {
@@ -45,21 +44,7 @@ async function bootstrap() {
     },
   });
 
-  // Start Kafka async với retry đơn giản
-  const startKafka = async () => {
-    let connected = false;
-    while (!connected) {
-      try {
-        await kafkaMicroservice.listen();
-        connected = true;
-        console.log('Kafka microservice connected');
-      } catch (e) {
-        console.log('Kafka not ready, retry in 3s...');
-        await new Promise((r) => setTimeout(r, 3000));
-      }
-    }
-  };
-
-  await startKafka(); // chạy async, không block API
+  // Start microservice
+  await app.startAllMicroservices();
 }
 bootstrap();

@@ -44,4 +44,4 @@ import { SupabaseModule } from '../supabase/supabase.module';
   ],
   exports: [ProductVariantService],
 })
-export class ProductModule {}
+export class ProductModule { }

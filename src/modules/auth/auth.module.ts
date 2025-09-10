@@ -19,6 +19,8 @@ import { CustomFacebookStrategy } from 'src/custom/custom_facebook_strategy';
 import { validateLoginDtoMiddleware } from 'src/middlewares/validatedto.middleware';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { CustomJwtCookieStrategy } from 'src/custom/custom_jwt_cookie_strategy';
+import { KafkaModule } from '../kafka/kafka.module';
+import { AuthConsumer } from './controller/auth.consumer';
 
 @Module({
   imports: [
@@ -34,8 +36,9 @@ import { CustomJwtCookieStrategy } from 'src/custom/custom_jwt_cookie_strategy';
       }),
       inject: [ConfigService],
     }),
+    KafkaModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthConsumer],
   providers: [
     AuthService,
     CustomLocalStrategy,

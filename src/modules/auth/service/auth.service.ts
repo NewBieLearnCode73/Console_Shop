@@ -18,6 +18,7 @@ import {
   sendMailResetPassword,
   sendMailActiveAccount,
 } from 'src/utils/brevo_helper';
+import { KafkaService } from 'src/modules/kafka/service/kafka.service';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     @InjectRedis()
     private readonly redis: Redis,
+    private readonly kafkaService: KafkaService,
   ) { }
   getTTLToken(token: string): number {
     try {
@@ -292,7 +294,7 @@ export class AuthService {
       throw new UnauthorizedException('Missing tokens for logout');
     }
 
-    const userId = await this.redis.get(`ACCESS_TOKEN:${accessToken}`) || "";
+    const userId = (await this.redis.get(`ACCESS_TOKEN:${accessToken}`)) || '';
 
     const accessTokenTtl = this.getTTLToken(accessToken);
     const refreshTokenTtl = this.getTTLToken(refreshToken);
@@ -329,6 +331,11 @@ export class AuthService {
     });
 
     await this.userRepository.save(newUser);
+
+    // Send email to user to active account
+    this.kafkaService.sendEvent('auth_send_mail_register', {
+      email: newUser.email,
+    });
   }
 
   // ACTIVE ACCOUNT

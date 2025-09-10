@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { OrderDigitalBuyNowRequestDto } from '../dto/request/order-request.dto';
 import { OrderService } from '../service/order.service';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
@@ -10,7 +18,10 @@ export class OrderController {
 
   @Get('/digital_keys/:orderId')
   @UseGuards(JwtCookieAuthGuard)
-  async getDigitalKeys(@Param('orderId') orderId: string, @Req() req: AuthenticationRequest) {
+  async getDigitalKeys(
+    @Param('orderId') orderId: string,
+    @Req() req: AuthenticationRequest,
+  ) {
     return await this.orderService.getDigitalKeys(req.user.id, orderId);
   }
 
@@ -20,7 +31,10 @@ export class OrderController {
     @Req() req: AuthenticationRequest,
     @Body() orderDigitalBuyNowRequestDto: OrderDigitalBuyNowRequestDto,
   ) {
-    return await this.orderService.digitalProductBuyNow(req.user.id, orderDigitalBuyNowRequestDto);
+    return await this.orderService.digitalProductBuyNow(
+      req.user.id,
+      orderDigitalBuyNowRequestDto,
+    );
   }
 
   // @Post('cancel-order/:orderId')
