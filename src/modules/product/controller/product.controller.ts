@@ -28,9 +28,9 @@ import { RolesGuard } from 'src/guards/role.guard';
 
 @Controller('api/products')
 export class ProductController {
-  constructor(private readonly productService: ProductService) { }
+  constructor(private readonly productService: ProductService) {}
 
-  //******************  FOR USER AND GUEST - START  ************************//
+  //******************  FOR ALL - START  ************************//
   @Get('/for-users-and-guests')
   async findAllProductsForUsersAndGuests(
     @Query() paginationRequestDto: PaginationRequestDto,
@@ -40,7 +40,7 @@ export class ProductController {
     );
   }
 
-  @Get('/for-users-and-guests/variants/:slug')
+  @Get('/for-users-and-guests/variants/slug/:slug')
   async findProductVariantsForUsersAndGuests(@Param('slug') slug: string) {
     return this.productService.findProductVariantsForUsersAndGuests(slug);
   }
@@ -56,7 +56,7 @@ export class ProductController {
     );
   }
 
-  // ******************* FOR USER AND GUEST - END  *************************//
+  // ******************* FOR ALL - END  *************************//
 
   // ******************* FOR MANAGER and ADMIN - START ***********************/
   @Get()

@@ -37,7 +37,7 @@ export class ProductService {
     private readonly stockRepository: Repository<Stock>,
     private readonly productVariantService: ProductVariantService,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   //****************** FOR USER AND GUEST - START **********************//
   async findAllProductsForUsersAndGuests(
@@ -67,7 +67,9 @@ export class ProductService {
         seo_description: product.seo_description,
         category_id: product.category?.id,
         brand_id: product.brand?.id,
-        image: product.variants?.[0]?.images?.[0]?.product_url || null,
+        image:
+          product.variants?.[0]?.images?.filter((image) => image.is_main)?.[0]
+            .product_url || null,
         price: Math.min(...product.variants.map((v) => v.price)) || null,
       }),
     );
@@ -284,8 +286,13 @@ export class ProductService {
       throw new NotFoundException('Product not found');
     }
 
-    const { brand_id, category_id, ...rest } = updateProductRequestDto;
+    const { brand_id, category_id, name, ...rest } = updateProductRequestDto;
     Object.assign(product, rest);
+
+    if (name && name !== product.name) {
+      product.slug = generateSlug(name);
+      product.name = name;
+    }
 
     if (category_id) {
       if (!isUUID(category_id)) {

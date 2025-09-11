@@ -52,7 +52,7 @@ export class ProductVariantService {
     private readonly digitalKeyRepository: Repository<DigitalKey>,
     private readonly supabaseService: SupabaseService,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   // *************************************** FOR ALL - START ****************************************/
   async search(searchDto: SearchProductVariantRequestDto) {
@@ -218,7 +218,7 @@ export class ProductVariantService {
       where: { product: { id: id } },
       relations: ['product', 'images'],
     });
-    if (!variants || variants.length === 0) {
+    if (!variants) {
       throw new NotFoundException('No variants found for this product');
     }
     return variants;
@@ -554,21 +554,6 @@ export class ProductVariantService {
         throw new NotFoundException(`Variant with id ${id} not found`);
       }
 
-      if (updateVariantDto.slug) {
-        const existSlug = await manager.findOne(
-          this.productVariantRepository.target,
-          {
-            where: { slug: updateVariantDto.slug, id: Not(id) }, // Check for existing slug (Not include this variant )
-          },
-        );
-
-        if (existSlug) {
-          throw new BadRequestException(
-            `Slug '${updateVariantDto.slug}' is already in use`,
-          );
-        }
-      }
-
       if (updateVariantDto.variant_name) {
         const existName = await manager.findOne(
           this.productVariantRepository.target,
@@ -580,6 +565,25 @@ export class ProductVariantService {
         if (existName) {
           throw new BadRequestException(
             `Variant name '${updateVariantDto.variant_name}' is already in use`,
+          );
+        }
+
+        if (variant.variant_name !== updateVariantDto.variant_name) {
+          variant.slug = generateSlug(updateVariantDto.variant_name);
+        }
+      }
+
+      if (updateVariantDto.sku) {
+        const existSku = await manager.findOne(
+          this.productVariantRepository.target,
+          {
+            where: { sku: updateVariantDto.sku, id: Not(id) },
+          },
+        );
+
+        if (existSku) {
+          throw new BadRequestException(
+            `SKU '${updateVariantDto.sku}' is already in use`,
           );
         }
       }
@@ -947,6 +951,13 @@ export class ProductVariantService {
         `Failed to delete variant ${id}: ${error.message}`,
       );
     }
+  }
+
+  async deleteDigitalKeyById(id: string) {
+    const digitalKey = await this.digitalKeyRepository.findOne({
+      where: { id },
+      relations: ['variant'],
+    });
   }
 
   // *********************************** ADMIN - END ****************************************/

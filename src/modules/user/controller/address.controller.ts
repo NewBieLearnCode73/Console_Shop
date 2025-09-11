@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -21,7 +22,7 @@ import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/addresses')
 export class AddresController {
-  constructor(private readonly addressService: AddressService) { }
+  constructor(private readonly addressService: AddressService) {}
 
   // GET ALL
   @Get()
@@ -82,5 +83,15 @@ export class AddresController {
       req.user.id,
       setDefaultAddressRequestDto.addressId,
     );
+  }
+
+  // DELETE ADDRESS
+  @Delete('delete/:id')
+  @UseGuards(JwtCookieAuthGuard)
+  async deleteAddress(
+    @Request() req: AuthenticationRequest,
+    @Param('id') addressId: string,
+  ) {
+    return this.addressService.deleteAddressByAddressId(req.user.id, addressId);
   }
 }

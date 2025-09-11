@@ -34,6 +34,7 @@ export class CreateCategoryRequestDto {
   parent_id?: string;
 }
 
+// dto
 export class UpdateCategoryRequestDto {
   @IsOptional()
   @IsString()
@@ -56,7 +57,7 @@ export class UpdateCategoryRequestDto {
   seo_description?: string;
 
   @IsOptional()
-  @IsString()
+  @Transform(({ value }) => (value === '' ? null : value))
   @IsUUID()
-  parent_id?: string;
+  parent_id?: string | null;
 }

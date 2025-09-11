@@ -33,7 +33,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
@@ -123,13 +123,14 @@ export class AuthController {
       return res.status(200).send({ message: 'Provide new access token' });
     } catch (error) {
       console.error('Provide new access token error:', error);
-      return res
-        .status(500)
-        .send({ message: 'Provide new access token failed', error: error });
+      return res.status(500).send({
+        message: 'Provide new access token failed',
+        error: error,
+      });
     }
   }
 
-  @Post('logout')
+  @Get('logout')
   async logout(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     try {
       const access_token = req.cookies['access_token'];
@@ -157,7 +158,8 @@ export class AuthController {
   @Post('change-password')
   @UseGuards(JwtCookieAuthGuard)
   async changePassword(
-    @Body() changePasswordWithOldPasswordDto: ChangePasswordWithOldPasswordDto,
+    @Body()
+    changePasswordWithOldPasswordDto: ChangePasswordWithOldPasswordDto,
     @Req() req: AuthenticationRequest,
   ) {
     return this.authService.changePasswordWithOldPassword(
@@ -214,7 +216,7 @@ export class AuthController {
   // Login with google
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
-  async googleLogin() { }
+  async googleLogin() {}
 
   @Get('/oauth2/callback/google')
   @UseGuards(GoogleOAuthGuard)
@@ -272,7 +274,7 @@ export class AuthController {
   // Login with facebook
   @Get('facebook')
   @UseGuards(FacebookOAuthGuard)
-  async facebookLogin() { }
+  async facebookLogin() {}
 
   @Get('oauth2/callback/facebook')
   @UseGuards(FacebookOAuthGuard)

@@ -69,10 +69,6 @@ export class UpdateVariantDto {
 
   @IsNotEmpty()
   @IsString()
-  slug: string;
-
-  @IsNotEmpty()
-  @IsString()
   sku: string;
 
   @Transform(({ value }) => (value ? parseFloat(value) : undefined))

@@ -1,4 +1,4 @@
-import { Controller, Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { AuthService } from '../service/auth.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
 

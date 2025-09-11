@@ -23,12 +23,17 @@ import { RolesGuard } from 'src/guards/role.guard';
 
 @Controller('api/categories')
 export class CategoryController {
-  constructor(private readonly categoryService: CategoryService) { }
+  constructor(private readonly categoryService: CategoryService) {}
 
   //******************  FOR ALL - START  ************************//
   @Get()
   async findAll(@Query() paginationRequestDto: PaginationRequestDto) {
     return this.categoryService.findAllCategories(paginationRequestDto);
+  }
+
+  @Get('/not-child')
+  async findAllNotChild(@Query() paginationRequestDto: PaginationRequestDto) {
+    return this.categoryService.findAllNotChildCategories(paginationRequestDto);
   }
 
   @Get(':id')

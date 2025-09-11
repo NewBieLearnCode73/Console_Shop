@@ -37,7 +37,7 @@ export class Category extends AbstractEntity<Category> implements SeoType {
     nullable: true,
   })
   @JoinColumn({ name: 'parent_id' })
-  parent: Category;
+  parent?: Category | null;
 
   @OneToMany(() => Category, (category) => category.parent)
   children: Category[];

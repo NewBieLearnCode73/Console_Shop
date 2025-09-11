@@ -8,6 +8,7 @@ import {
 import { plainToInstance } from 'class-transformer';
 import {
   CategoryResponseDto,
+  CategoryWithNotChildResponseDto,
   CreateCategoryResponseDto,
 } from '../dto/response/category-response.dto';
 import { isUUID } from 'class-validator';
@@ -26,6 +27,29 @@ export class CategoryService {
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
   ) {}
+
+  async findAllNotChildCategories(paginationRequestDto: PaginationRequestDto) {
+    const { page, limit, sortBy, order } = paginationRequestDto;
+
+    const [categories, total] = await this.categoryRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        [sortBy]: order,
+      },
+    });
+
+    const response = categories.map((category) =>
+      plainToInstance(CategoryWithNotChildResponseDto, category),
+    );
+
+    return PaginationResult<CategoryWithNotChildResponseDto>(
+      response,
+      total,
+      page,
+      limit,
+    );
+  }
 
   async findByCategoryById(id: string) {
     if (!isUUID(id)) {
@@ -95,34 +119,52 @@ export class CategoryService {
     id: string,
     updateCategoryRequestDto: UpdateCategoryRequestDto,
   ) {
-    if (!isUUID(id) || !isUUID(updateCategoryRequestDto.parent_id)) {
-      throw new BadRequestException('Invalid UUID');
+    if (!isUUID(id)) {
+      throw new BadRequestException('Invalid Category ID');
     }
 
     const category = await this.categoryRepository.findOne({
       where: { id },
       relations: ['parent'],
     });
+
     if (!category) {
-      throw new BadRequestException('Category not found');
+      throw new NotFoundException('Category not found');
     }
 
-    if (updateCategoryRequestDto.parent_id) {
+    if (
+      updateCategoryRequestDto.name &&
+      updateCategoryRequestDto.name !== category.name
+    ) {
+      category.slug = generateSlug(updateCategoryRequestDto.name);
+    }
+
+    console.log('Category slug: ', category.slug);
+
+    if (
+      updateCategoryRequestDto.parent_id ||
+      updateCategoryRequestDto.parent_id === ''
+    ) {
+      // nếu có parent_id thì validate
+      if (!isUUID(updateCategoryRequestDto.parent_id)) {
+        throw new BadRequestException('Invalid Parent ID');
+      }
+
       const parentCategory = await this.categoryRepository.findOne({
         where: { id: updateCategoryRequestDto.parent_id },
       });
-      if (!isUUID(updateCategoryRequestDto.parent_id)) {
-        throw new BadRequestException('Invalid parentId UUID');
-      }
 
       if (!parentCategory) {
         throw new NotFoundException('Parent category not found');
       }
+
       category.parent = parentCategory;
+    } else {
+      category.parent = null;
     }
 
     this.categoryRepository.merge(category, updateCategoryRequestDto);
-    category.slug = generateSlug(category.name);
+
     await this.categoryRepository.save(category);
     return plainToInstance(CategoryResponseDto, category);
   }

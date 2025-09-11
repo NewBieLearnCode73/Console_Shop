@@ -172,4 +172,32 @@ export class AddressService {
       excludeExtraneousValues: true,
     });
   }
+
+  async deleteAddressByAddressId(userId: string, addressId: string) {
+    if (!isUUID(addressId) || !isUUID(userId)) {
+      throw new BadRequestException('UUID is not accepted!');
+    }
+
+    const addresses = await this.addressRepository.find({
+      where: { user: { id: userId } },
+    });
+
+    if (addresses.length === 0) {
+      throw new NotFoundException(`User with id ${userId} has no address!`);
+    }
+
+    if (addresses.length === 1) {
+      throw new BadRequestException(
+        'You only have one address, you cannot delete it!',
+      );
+    }
+
+    const addressToDelete = addresses.find((addr) => addr.id === addressId);
+
+    if (!addressToDelete) {
+      throw new NotFoundException(`Address with id ${addressId} is not found!`);
+    }
+
+    await this.addressRepository.remove(addressToDelete);
+  }
 }

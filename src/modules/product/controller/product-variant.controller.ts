@@ -417,5 +417,13 @@ export class ProductVariantController {
     await this.productVariantService.deleteVariant(variantId);
   }
 
+  // Delete key by id
+  @Delete('digital-key/:id')
+  @RolesDecorator([Role.ADMIN])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async deleteDigitalKeyById(@Param('id', ParseUUIDPipe) id: string) {
+    await this.productVariantService.deleteDigitalKeyById(id);
+  }
+
   //*************************************** FOR ADMIN - END *************************************************/
 }

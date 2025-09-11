@@ -25,7 +25,7 @@ export class UserController {
     private readonly supabaseService: SupabaseService,
     private readonly profileService: ProfileService,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   // *****************************************************************//
   // ***************************** ADMIN *****************************//
@@ -87,8 +87,8 @@ export class UserController {
 
   //  GET ALL USER WITH PROFILE
   @Get('manager')
-  // @RolesDecorator(Role.MANAGER)
-  // @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  @RolesDecorator([Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
   async getAllUserIsCustomerWithProfile(
     @Query() paginationRequestDto: PaginationRequestDto,
   ) {

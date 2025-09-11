@@ -29,3 +29,15 @@ export class CategoryResponseDto {
   updated_at: Date;
   children: CategoryResponseDto[];
 }
+
+export class CategoryWithNotChildResponseDto {
+  id: string;
+  name: string;
+  description: string;
+  slug?: string;
+  seo_title?: string;
+  seo_description?: string;
+  created_at: Date;
+  updated_at: Date;
+  parent?: CategoryWithNotChildResponseDto;
+}
