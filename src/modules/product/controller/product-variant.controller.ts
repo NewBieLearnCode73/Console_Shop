@@ -34,7 +34,7 @@ import { RolesGuard } from 'src/guards/role.guard';
 
 @Controller('api/product-variants')
 export class ProductVariantController {
-  constructor(private readonly productVariantService: ProductVariantService) { }
+  constructor(private readonly productVariantService: ProductVariantService) {}
 
   //*************************************** FOR ALL - START ****************************************/
 
@@ -188,7 +188,10 @@ export class ProductVariantController {
             return cb(null, true);
           }
 
-          if (file.mimetype === 'text/csv') {
+          if (
+            file.mimetype === 'text/csv' ||
+            file.mimetype === 'application/vnd.ms-excel'
+          ) {
             return cb(null, true);
           }
 
@@ -346,7 +349,10 @@ export class ProductVariantController {
         fileSize: 5 * 1024 * 1024,
       },
       fileFilter: (req, file, cb) => {
-        if (file.mimetype === 'text/csv') {
+        if (
+          file.mimetype === 'text/csv' ||
+          file.mimetype === 'application/vnd.ms-excel'
+        ) {
           return cb(null, true);
         }
 

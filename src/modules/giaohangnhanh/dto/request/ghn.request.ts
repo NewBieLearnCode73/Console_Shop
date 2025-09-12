@@ -1,158 +1,103 @@
-import {
-  IsString,
-  IsNumber,
-  IsOptional,
-  IsArray,
-  IsObject,
-  ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { Expose } from 'class-transformer';
+import { IsArray, IsNotEmpty, IsString } from 'class-validator';
 
-class CategoryDto {
-  @IsString()
-  level1: string;
+export class GhnRequestDto {
+  @Expose()
+  service_id: number;
+  @Expose()
+  to_district_id: number;
+  @Expose()
+  to_ward_code: string;
+  @Expose()
+  from_district_id: number;
+  @Expose()
+  from_ward_code: string;
 }
 
-class ItemDto {
-  @IsString()
-  name: string;
-
-  @IsString()
-  code: string;
-
-  @IsNumber()
-  quantity: number;
-
-  @IsNumber()
-  price: number;
-
-  @IsNumber()
+export class GhnCalculateShippingFeeDto {
+  @Expose()
+  to_district_id: number;
+  @Expose()
+  to_ward_code: string;
+  @Expose()
+  service_type_id: number;
+  @Expose()
+  height: number;
+  @Expose()
+  weight: number;
+  @Expose()
   length: number;
-
-  @IsNumber()
+  @Expose()
   width: number;
 
-  @IsNumber()
-  height: number;
-
-  @IsNumber()
-  weight: number;
-
-  @IsObject()
-  @ValidateNested()
-  @Type(() => CategoryDto)
-  category: CategoryDto;
+  @Expose()
+  cod_value: number = 0;
 }
 
-export class CreateGhnOrderDto {
-  @IsNumber()
-  payment_type_id: number;
-
+export class GhnItemType {
+  @IsNotEmpty()
   @IsString()
-  note: string;
-
+  name: string;
   @IsString()
-  required_note: string;
+  @IsNotEmpty()
+  code: string;
+  @IsNotEmpty()
+  quantity: number;
+  @IsNotEmpty()
+  weight: number;
+}
 
+export class GhnCreateOrderDto {
+  // Thông tin mặc định
+  // from_name: string = 'Shop Console';
+  // from_phone: string = '0123456789';
+  // from_address: string =
+  //   'Số 17A, Đường Cộng Hoà, Phường 4, Quận Tân Bình, TP. Hồ Chí Minh';
+  // from_ward_name: string = 'Phường 4';
+  // from_district_name: string = 'Quận Tân Bình';
+  // from_province_name: string = 'TP. Hồ Chí Minh';
+  // service_type_id: number = 2; // hàng hàng nhẹ < 20kg
+  // payment_type_id: number = 1; // 1 là shop trả, 2 là người nhận trả
+  // required_note: string = RequiredNote.NOT_ALLOW_VIEW; // Không cho xem
+
+  // Thông tin cần nhập
   @IsString()
-  return_phone: string;
-
-  @IsString()
-  return_address: string;
-
-  @IsOptional()
-  @IsNumber()
-  return_district_id: number | null;
-
-  @IsString()
-  return_ward_code: string;
-
-  @IsString()
-  client_order_code: string;
-
-  @IsString()
-  from_name: string;
-
-  @IsString()
-  from_phone: string;
-
-  @IsString()
-  from_address: string;
-
-  @IsString()
-  from_ward_name: string;
-
-  @IsString()
-  from_district_name: string;
-
-  @IsString()
-  from_province_name: string;
-
-  @IsString()
+  @IsNotEmpty()
   to_name: string;
 
   @IsString()
+  @IsNotEmpty()
   to_phone: string;
 
   @IsString()
+  @IsNotEmpty()
   to_address: string;
 
   @IsString()
-  to_ward_name: string;
+  @IsNotEmpty()
+  to_ward_code: string;
+
+  @IsNotEmpty()
+  to_district_id: number;
 
   @IsString()
-  to_district_name: string;
+  @IsNotEmpty()
+  client_order_code: string;
 
-  @IsString()
-  to_province_name: string;
+  @IsNotEmpty()
+  cod_amount: number = 0;
 
-  @IsNumber()
-  cod_amount: number;
-
-  @IsString()
-  content: string;
-
-  @IsNumber()
+  // weight: number; // Sẽ tính sau
+  @IsNotEmpty()
   length: number;
 
-  @IsNumber()
+  @IsNotEmpty()
   width: number;
 
-  @IsNumber()
+  @IsNotEmpty()
   height: number;
 
-  @IsNumber()
-  weight: number;
-
-  @IsNumber()
-  cod_failed_amount: number;
-
-  @IsOptional()
-  @IsNumber()
-  pick_station_id?: number;
-
-  @IsOptional()
-  @IsNumber()
-  deliver_station_id?: number | null;
-
-  @IsNumber()
-  insurance_value: number;
-
-  @IsNumber()
-  service_type_id: number;
-
-  @IsOptional()
-  coupon?: string | null;
-
-  @IsOptional()
-  @IsNumber()
-  pickup_time?: number;
-
+  @IsNotEmpty()
   @IsArray()
-  pick_shift: number[];
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ItemDto)
-  items: ItemDto[];
+  items: GhnItemType[];
 }

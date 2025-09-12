@@ -11,7 +11,6 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import { KafkaService } from 'src/modules/kafka/service/kafka.service';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
 import { PaymentStatus } from 'src/constants/payment_status.enum';
-import { T } from 'node_modules/@faker-js/faker/dist/airline-CHFQMWko';
 
 @Injectable()
 export class MomoService {
