@@ -216,7 +216,7 @@ export class ProductVariantService {
   async getAllVariantsByProductIdWithCostPrice(id: string) {
     const variants = await this.productVariantRepository.find({
       where: { product: { id: id } },
-      relations: ['product', 'images'],
+      relations: ['product', 'images', 'stock'],
     });
     if (!variants) {
       throw new NotFoundException('No variants found for this product');

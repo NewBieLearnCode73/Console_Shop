@@ -13,12 +13,14 @@ import { CartModule } from './modules/cart/cart.module';
 import { KafkaModule } from './modules/kafka/kafka.module';
 import { MomoModule } from './modules/momo/momo.module';
 import { GiaohangnhanhModule } from './modules/giaohangnhanh/giaohangnhanh.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         name: 'reset-password-limit',

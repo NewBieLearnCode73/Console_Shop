@@ -92,12 +92,6 @@ export class GhnService {
     const { items, ...rest } = ghnCreateOrderDto;
     const totalWeight = this.calculateTotalWeight(items);
 
-    console.log('📦 Payload gửi sang GHN:', {
-      ...rest,
-      weight: totalWeight,
-      items,
-    });
-
     const orderCreated = await this.ghn.order.createOrder({
       from_name: 'Shop Console',
       from_phone: '0945046925',

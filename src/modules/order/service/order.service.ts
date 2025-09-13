@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { OrderDigitalBuyNowRequestDto } from '../dto/request/order-request.dto';
+import {
+  OrderDigitalBuyNowRequestDto,
+  OrderPhysicalBuyNowRequestDto,
+} from '../dto/request/order-request.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan, IsNull } from 'typeorm';
 import { Order } from '../entity/order.entity';
@@ -20,6 +23,9 @@ import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
 import { KeyStatus } from 'src/constants/key_status.enum';
 import { decryptKeyGame } from 'src/utils/crypto_helper';
 import { ProductStatus } from 'src/constants/product_status.enum';
+import { PaymentMethod } from 'src/constants/payment_method.enum';
+import { UUID } from 'typeorm/driver/mongodb/bson.typings.js';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class OrderService {
@@ -42,7 +48,7 @@ export class OrderService {
     private readonly dataSource: DataSource,
 
     @InjectRedis() private readonly redis: Redis,
-  ) { }
+  ) {}
   // Get digital keys for an order
   async getDigitalKeys(userId: string, orderId: string) {
     const order = await this.orderRepository.findOne({
@@ -116,14 +122,16 @@ export class OrderService {
       stock.reserved += 1;
       await manager.getRepository(Stock).save(stock);
 
-      // Find 1 available digital key
-      const availableKey = await manager.getRepository(DigitalKey).findOne({
-        where: {
-          variant: { id: productVariant.id },
-          status: KeyStatus.UNUSED,
-          orderItem: IsNull(),
-        },
-      });
+      // Lock
+      const availableKey = await manager
+        .getRepository(DigitalKey)
+        .createQueryBuilder('digitalKey')
+        .setLock('pessimistic_write')
+        .innerJoinAndSelect('digitalKey.variant', 'variant')
+        .andWhere('variant.id = :variantId', { variantId: productVariant.id })
+        .andWhere('digitalKey.status = :status', { status: KeyStatus.UNUSED })
+        .andWhere('digitalKey.orderItem IS NULL')
+        .getOne();
 
       if (!availableKey)
         throw new BadRequestException('No available digital keys in stock!');
@@ -223,7 +231,7 @@ export class OrderService {
   }
 
   // Cron job to cancel expired orders every 5 minutes
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async cleanExpriedOrders() {
     const expiredOrder = await this.orderRepository.find({
       where: {
@@ -236,5 +244,200 @@ export class OrderService {
     for (const order of expiredOrder) {
       await this.autoFailedOrder(order.id);
     }
+  }
+
+  async physicalProductBuyNow(
+    userId: string,
+    orderPhysicalBuyNowRequestDto: OrderPhysicalBuyNowRequestDto,
+  ) {
+    const { productVariantId, quantity, addressId, paymentMethod } =
+      orderPhysicalBuyNowRequestDto;
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId, is_active: true },
+    });
+    if (!user) throw new BadRequestException('User not found or inactive!');
+
+    const productVariant = await this.productVariantRepository.findOne({
+      where: {
+        id: productVariantId,
+        product: { status: ProductStatus.ACTIVE },
+      },
+      relations: ['product'],
+    });
+
+    if (!productVariant)
+      throw new BadRequestException('Product variant not found or inactive!');
+
+    if (productVariant.product.product_type === ProductType.CARD_DIGITAL_KEY)
+      throw new BadRequestException('Invalid product type for physical order!');
+
+    const address = await this.addressRepository.findOne({
+      where: { id: addressId, user: { id: userId } },
+    });
+    if (!address) throw new BadRequestException('Address not found!');
+
+    // Thanh toán COD
+    let savedOrder;
+
+    if (paymentMethod === PaymentMethod.COD) {
+      savedOrder = await this.dataSource.transaction(async (manager) => {
+        const stock = await manager
+          .getRepository(Stock)
+          .createQueryBuilder('stock')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('stock.variant', 'variant')
+          .andWhere('variant.id = :variantId', { variantId: productVariantId })
+          .getOne();
+
+        if (!stock)
+          throw new BadRequestException(
+            'Stock information not found for product variant!',
+          );
+
+        const available = stock.quantity - stock.reserved;
+        if (available < quantity)
+          throw new BadRequestException(
+            'Insufficient stock for product variant!',
+          );
+
+        stock.reserved += quantity;
+        await manager.getRepository(Stock).save(stock);
+
+        const orderItem = await manager.getRepository(OrderItem).create({
+          quantity,
+          price: productVariant.price,
+          productVariant,
+        });
+
+        const discount = productVariant.discount / 100;
+        const discount_amount = orderItem.price * orderItem.quantity * discount;
+        const sub_total = orderItem.price * orderItem.quantity;
+
+        const orderProp = {
+          status: OrderStatus.PENDING_CONFIRMATION,
+          sub_total,
+          discount_amount: discount_amount,
+          order_type: OrderType.PHYSICAL,
+          orderItems: [orderItem],
+          total_amount: sub_total - discount_amount + 22000,
+          declareation_fee: 0,
+        };
+
+        const orderAddress = manager.getRepository(OrderAddress).create({
+          to_address: address.to_address,
+          to_district_id: address.to_district_id,
+          to_name: address.to_name,
+          to_phone: address.to_phone,
+          to_province_name: address.to_province_name,
+          to_ward_code: address.to_ward_code,
+        });
+
+        const savedOrderAddress = await manager
+          .getRepository(OrderAddress)
+          .save(orderAddress);
+
+        const order = manager.getRepository(Order).create({
+          status: orderProp.status,
+          sub_total: orderProp.sub_total,
+          discount_amount: orderProp.discount_amount,
+          order_type: orderProp.order_type,
+          orderItems: orderProp.orderItems,
+          total_amount: orderProp.total_amount,
+          orderAddress: savedOrderAddress,
+          user,
+        });
+
+        return await manager.getRepository(Order).save(order);
+      });
+
+      // Đợi admin xác nhận đơn hàng
+    } else if (paymentMethod === PaymentMethod.MOMO_WALLET) {
+      savedOrder = await this.dataSource.transaction(async (manager) => {
+        const stock = await manager
+          .getRepository(Stock)
+          .createQueryBuilder('stock')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('stock.variant', 'variant')
+          .andWhere('variant.id = :variantId', { variantId: productVariantId })
+          .getOne();
+
+        if (!stock)
+          throw new BadRequestException(
+            'Stock information not found for product variant!',
+          );
+
+        const available = stock.quantity - stock.reserved;
+        if (available < quantity)
+          throw new BadRequestException(
+            'Insufficient stock for product variant!',
+          );
+
+        stock.reserved += quantity;
+        await manager.getRepository(Stock).save(stock);
+
+        const orderItem = await manager.getRepository(OrderItem).create({
+          quantity,
+          price: productVariant.price,
+          productVariant,
+        });
+
+        const discount = productVariant.discount / 100;
+        const discount_amount = orderItem.price * orderItem.quantity * discount;
+        const sub_total = orderItem.price * orderItem.quantity;
+
+        const expiredAt = new Date();
+        expiredAt.setMinutes(expiredAt.getMinutes() + 100);
+
+        // Có thể thêm shipping_fee từ GHN vào đây
+
+        const orderProp = {
+          status: OrderStatus.PENDING_PAYMENT,
+          sub_total,
+          discount_amount: discount_amount,
+          order_type: OrderType.PHYSICAL,
+          orderItems: [orderItem],
+          total_amount: sub_total - discount_amount + 22000,
+          declareation_fee: 0,
+          expired_at: expiredAt,
+        };
+
+        const orderAddress = manager.getRepository(OrderAddress).create({
+          to_address: address.to_address,
+          to_district_id: address.to_district_id,
+          to_name: address.to_name,
+          to_phone: address.to_phone,
+          to_province_name: address.to_province_name,
+          to_ward_code: address.to_ward_code,
+        });
+
+        const savedOrderAddress = await manager
+          .getRepository(OrderAddress)
+          .save(orderAddress);
+
+        const order = manager.getRepository(Order).create({
+          status: orderProp.status,
+          sub_total: orderProp.sub_total,
+          discount_amount: orderProp.discount_amount,
+          order_type: orderProp.order_type,
+          orderItems: orderProp.orderItems,
+          total_amount: orderProp.total_amount,
+          orderAddress: savedOrderAddress,
+          user,
+          expired_at: orderProp.expired_at,
+        });
+
+        const savedOrder = await manager.getRepository(Order).save(order);
+
+        this.kafkaService.sendEvent('create_momo_payment', {
+          orderId: savedOrder.id,
+          amount: savedOrder.total_amount,
+        });
+      });
+    } else {
+      throw new BadRequestException('Invalid payment method!');
+    }
+
+    return savedOrder;
   }
 }

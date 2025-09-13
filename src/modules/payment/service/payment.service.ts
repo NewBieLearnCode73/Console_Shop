@@ -54,11 +54,6 @@ export class PaymentService {
     });
     if (!order) throw new BadRequestException('Order not found!');
 
-    if (order.order_type !== OrderType.DIGITAL)
-      throw new BadRequestException(
-        'Only digital product orders can use online payment!',
-      );
-
     if (order.status === OrderStatus.CANCELED)
       throw new BadRequestException('This order was canceled!');
 
@@ -109,12 +104,13 @@ export class PaymentService {
     });
 
     if (!order) throw new BadRequestException('Order not found!');
-    order.status = OrderStatus.COMPLETED;
     order.expired_at = null;
     order.completed_at = new Date();
 
     // If digital order, update digital key status to USED and active_at
     if (order.order_type === OrderType.DIGITAL) {
+      order.status = OrderStatus.COMPLETED;
+
       for (const item of order.orderItems) {
         if (item.digitalKey) {
           const digitalKey = await this.digitalKeyRepository.findOne({
@@ -139,9 +135,28 @@ export class PaymentService {
         stock.quantity = Math.max(0, stock.quantity - item.quantity);
         await this.stockRepository.save(stock);
       }
-
-      await this.orderRepository.save(order);
     }
+
+    if (order.order_type === OrderType.PHYSICAL) {
+      order.status = OrderStatus.PAID;
+
+      for (const item of order.orderItems) {
+        const stock = await this.stockRepository.findOne({
+          where: { variant: { id: item.productVariant.id } },
+        });
+
+        if (!stock) {
+          throw new BadRequestException('Stock not found for variant');
+        }
+
+        stock.reserved = Math.max(0, stock.reserved - item.quantity);
+        stock.quantity = Math.max(0, stock.quantity - item.quantity);
+        await this.stockRepository.save(stock);
+      }
+    }
+
+    await this.orderRepository.save(order);
+    console.log('Order updated to COMPLETED:', order);
   }
 
   async createPaymentRecord(data: {

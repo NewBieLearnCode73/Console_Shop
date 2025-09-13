@@ -22,9 +22,6 @@ export class Order extends AbstractEntity<Order> {
   @Column({ nullable: true })
   order_code: string; // Đơn vị vận chuyển cung cấp
 
-  @Column({ type: 'uuid', nullable: true })
-  client_order_code: string; // Mã đơn hàng nội bộ
-
   @Column()
   sub_total: number;
 
@@ -35,10 +32,7 @@ export class Order extends AbstractEntity<Order> {
   shipping_fee: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  declaration_fee: number; // Phí khai báo: 0.005 * shipping_fee
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  total_amount: number; // sub_total + discount_amount + shipping_fee + declaration_fee
+  total_amount: number; // sub_total - discount_amount + shipping_fee
 
   @Column({
     type: 'enum',

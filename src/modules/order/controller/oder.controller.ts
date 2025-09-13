@@ -7,14 +7,17 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { OrderDigitalBuyNowRequestDto } from '../dto/request/order-request.dto';
+import {
+  OrderDigitalBuyNowRequestDto,
+  OrderPhysicalBuyNowRequestDto,
+} from '../dto/request/order-request.dto';
 import { OrderService } from '../service/order.service';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/orders')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) { }
+  constructor(private readonly orderService: OrderService) {}
 
   @Get('/digital_keys/:orderId')
   @UseGuards(JwtCookieAuthGuard)
@@ -34,6 +37,18 @@ export class OrderController {
     return await this.orderService.digitalProductBuyNow(
       req.user.id,
       orderDigitalBuyNowRequestDto,
+    );
+  }
+
+  @Post('physical/buy-now')
+  @UseGuards(JwtCookieAuthGuard)
+  async physicalBuyNow(
+    @Req() req: AuthenticationRequest,
+    @Body() orderPhysicalBuyNowRequestDto: OrderPhysicalBuyNowRequestDto,
+  ) {
+    return await this.orderService.physicalProductBuyNow(
+      req.user.id,
+      orderPhysicalBuyNowRequestDto,
     );
   }
 
