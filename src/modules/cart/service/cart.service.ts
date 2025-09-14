@@ -38,6 +38,22 @@ export class CartService {
       skip: (page - 1) * limit,
     });
 
+    // Lấy hình ảnh variant và tên variant
+    for (const item of items) {
+      const variant = await this.productVariantRepository.findOne({
+        where: { id: item.product_variant_id },
+        relations: ['images'],
+      });
+      if (variant) {
+        item['name'] = variant.variant_name;
+        item['imageUrl'] = variant.images.filter(
+          (img) => img.is_main,
+        )[0].product_url;
+        item['price'] = variant.price;
+        item['discount'] = variant.discount;
+      }
+    }
+
     return PaginationResult(items, total, page, limit);
   }
 
@@ -107,22 +123,26 @@ export class CartService {
       productOfVariant?.product_type === ProductType.CARD_DIGITAL_KEY
     ) {
       throw new BadRequestException(
-        'Only 1 digital key of variant can be added to the cart!',
+        'Only 1 digital key of variant can be added to the cart! Cart already has this item.',
       );
     } else if (item) {
       // Check stock
-      const isQuantityValid = await this.stockRepository.findOne({
-        where: {
-          variant: { id: productVariantId },
-          quantity: MoreThanOrEqual(item.quantity + quantity),
-        },
-      });
+      // const isQuantityValid = await this.stockRepository.findOne({
+      //   where: {
+      //     variant: { id: productVariantId },
+      //     quantity: MoreThanOrEqual(item.quantity + quantity),
+      //   },
+      // });
 
-      if (!isQuantityValid) {
-        throw new BadRequestException('Please enter a valid quantity');
-      }
+      // if (!isQuantityValid) {
+      //   throw new BadRequestException('Please enter a valid quantity');
+      // }
 
-      item.quantity += quantity;
+      // item.quantity += quantity;
+
+      throw new BadRequestException(
+        'Item already in cart, please use update cart feature to change quantity.',
+      );
     } else {
       item = this.cartItemRepository.create({
         product_variant_id: productVariantId,
@@ -130,6 +150,44 @@ export class CartService {
         quantity,
       });
     }
+
+    await this.cartItemRepository.save(item);
+  }
+
+  async updateItemInCart(
+    userId: string,
+    productVariantId: string,
+    quantity: number,
+  ) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items'],
+    });
+
+    if (!cart) {
+      throw new BadRequestException('Cart not found');
+    }
+
+    const item = cart.items.find(
+      (i) => i.product_variant_id === productVariantId,
+    );
+
+    if (!item) {
+      throw new BadRequestException('Item not found in cart');
+    }
+
+    const isQuantityValid = await this.stockRepository.findOne({
+      where: {
+        variant: { id: productVariantId },
+        quantity: MoreThanOrEqual(quantity),
+      },
+    });
+
+    if (!isQuantityValid) {
+      throw new BadRequestException('Please enter a valid quantity');
+    }
+
+    item.quantity = quantity;
 
     await this.cartItemRepository.save(item);
   }

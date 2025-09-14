@@ -28,7 +28,6 @@ import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { OrderShippingResponseDto } from '../dto/response/order-response.dto';
 import { GhnService } from 'src/modules/giaohangnhanh/service/ghn.service';
-('src/modules/giaohangnhanh/dto/request/ghn.request');
 
 @Injectable()
 export class OrderService {
@@ -366,8 +365,6 @@ export class OrderService {
         const result = await manager.getRepository(Order).save(order);
         return result;
       });
-
-      // Đợi admin xác nhận đơn hàng
     }
 
     // ********************************** THANH TOÁN MOMO *******************************

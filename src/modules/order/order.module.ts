@@ -13,6 +13,7 @@ import { KafkaModule } from '../kafka/kafka.module';
 import { KafkaService } from '../kafka/service/kafka.service';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 import { GiaohangnhanhModule } from '../giaohangnhanh/giaohangnhanh.module';
+import { Payment } from '../payment/entity/payment.entity';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { GiaohangnhanhModule } from '../giaohangnhanh/giaohangnhanh.module';
       ProductVariant,
       Stock,
       Address,
+      Payment,
     ]),
     KafkaModule,
     GiaohangnhanhModule,

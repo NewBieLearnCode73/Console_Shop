@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -19,7 +20,7 @@ import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/carts')
 export class CartController {
-  constructor(private readonly cartService: CartService) { }
+  constructor(private readonly cartService: CartService) {}
 
   // THÊM ENDPOINTS PUT -  Thêm sản phẩm vào giỏ hàng
 
@@ -41,6 +42,19 @@ export class CartController {
     @Body() addItemToCartRequestDto: AddItemToCartRequestDto,
   ) {
     return this.cartService.addItemToCart(
+      req.user.id,
+      addItemToCartRequestDto.productVariantId,
+      addItemToCartRequestDto.quantity,
+    );
+  }
+
+  @Put()
+  @UseGuards(JwtCookieAuthGuard)
+  async updateCartItem(
+    @Req() req: AuthenticationRequest,
+    @Body() addItemToCartRequestDto: AddItemToCartRequestDto,
+  ) {
+    return this.cartService.updateItemInCart(
       req.user.id,
       addItemToCartRequestDto.productVariantId,
       addItemToCartRequestDto.quantity,
