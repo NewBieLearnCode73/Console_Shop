@@ -12,6 +12,7 @@ import { Address } from '../user/entity/address.entity';
 import { KafkaModule } from '../kafka/kafka.module';
 import { KafkaService } from '../kafka/service/kafka.service';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
+import { GiaohangnhanhModule } from '../giaohangnhanh/giaohangnhanh.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
       Address,
     ]),
     KafkaModule,
+    GiaohangnhanhModule,
   ],
   controllers: [OrderController],
   providers: [OrderService, KafkaService, JwtCookieAuthGuard],

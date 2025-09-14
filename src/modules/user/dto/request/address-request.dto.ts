@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
 
 export class UpdateAddressRequestDto {
   @IsString()
@@ -17,9 +17,9 @@ export class UpdateAddressRequestDto {
   @IsNotEmpty()
   to_ward_code: string;
 
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
-  to_district_id: string;
+  to_district_id: number;
 
   @IsString()
   @IsNotEmpty()
@@ -43,9 +43,9 @@ export class CreateAddressRequestDto {
   @IsNotEmpty()
   to_ward_code: string;
 
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
-  to_district_id: string;
+  to_district_id: number;
 
   @IsString()
   @IsNotEmpty()

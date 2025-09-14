@@ -37,7 +37,7 @@ export async function bootstrap() {
       to_phone: faker.phone.number(),
       to_address: faker.location.streetAddress(),
       to_ward_code: faker.string.numeric(6),
-      to_district_id: faker.string.numeric(3),
+      to_district_id: faker.number.int({ min: 1, max: 700 }),
       to_province_name: faker.location.city(),
       user: randomUser,
     });

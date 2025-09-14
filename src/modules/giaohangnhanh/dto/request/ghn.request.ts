@@ -1,5 +1,11 @@
 import { Expose } from 'class-transformer';
-import { IsArray, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class GhnRequestDto {
   @Expose()
@@ -43,22 +49,14 @@ export class GhnItemType {
   code: string;
   @IsNotEmpty()
   quantity: number;
-  @IsNotEmpty()
+  @IsOptional()
   weight: number;
 }
 
 export class GhnCreateOrderDto {
-  // Thông tin mặc định
-  // from_name: string = 'Shop Console';
-  // from_phone: string = '0123456789';
-  // from_address: string =
-  //   'Số 17A, Đường Cộng Hoà, Phường 4, Quận Tân Bình, TP. Hồ Chí Minh';
-  // from_ward_name: string = 'Phường 4';
-  // from_district_name: string = 'Quận Tân Bình';
-  // from_province_name: string = 'TP. Hồ Chí Minh';
-  // service_type_id: number = 2; // hàng hàng nhẹ < 20kg
-  // payment_type_id: number = 1; // 1 là shop trả, 2 là người nhận trả
-  // required_note: string = RequiredNote.NOT_ALLOW_VIEW; // Không cho xem
+  @IsNotEmpty()
+  @IsUUID()
+  order_id: string;
 
   // Thông tin cần nhập
   @IsString()
@@ -79,10 +77,6 @@ export class GhnCreateOrderDto {
 
   @IsNotEmpty()
   to_district_id: number;
-
-  @IsString()
-  @IsNotEmpty()
-  client_order_code: string;
 
   @IsNotEmpty()
   cod_amount: number = 0;

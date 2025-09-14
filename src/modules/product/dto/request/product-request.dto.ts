@@ -1,6 +1,7 @@
 import {
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -20,6 +21,10 @@ export class CreateProductRequestDto {
   @IsNotEmpty()
   @IsEnum(ProductType)
   product_type: ProductType;
+
+  @IsNotEmpty()
+  @IsNumber()
+  weight: number; // in grams
 
   @IsString()
   seo_title?: string;
@@ -42,6 +47,10 @@ export class UpdateProductRequestDto {
 
   @IsString()
   description?: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  weight: number; // in grams
 
   @IsString()
   seo_title?: string;

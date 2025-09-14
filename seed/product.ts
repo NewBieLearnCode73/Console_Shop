@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { ProductService } from '../src/modules/product/service/product.service';
@@ -7,13 +6,15 @@ import { Brand } from '../src/modules/product/entity/brand.entity';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { faker } from '@faker-js/faker';
-import { ProductType } from "src/constants/product_type.enum";
+import { ProductType } from 'src/constants/product_type.enum';
 
 export async function bootstrap(amount = 10) {
   const app = await NestFactory.createApplicationContext(AppModule);
 
   const productService = app.get(ProductService);
-  const categoryRepository = app.get<Repository<Category>>(getRepositoryToken(Category));
+  const categoryRepository = app.get<Repository<Category>>(
+    getRepositoryToken(Category),
+  );
   const brandRepository = app.get<Repository<Brand>>(getRepositoryToken(Brand));
 
   const categories = await categoryRepository.find();
@@ -37,6 +38,7 @@ export async function bootstrap(amount = 10) {
         ProductType.CARD_PHYSICAL,
         ProductType.CARD_DIGITAL_KEY,
       ]),
+      weight: faker.number.float({ min: 100, max: 5000 }), // weight in grams
       seo_title: faker.lorem.sentence(5),
       seo_description: faker.lorem.sentence(10),
       category_id: randomCategory.id,

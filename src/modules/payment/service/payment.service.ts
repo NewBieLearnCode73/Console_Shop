@@ -148,10 +148,6 @@ export class PaymentService {
         if (!stock) {
           throw new BadRequestException('Stock not found for variant');
         }
-
-        stock.reserved = Math.max(0, stock.reserved - item.quantity);
-        stock.quantity = Math.max(0, stock.quantity - item.quantity);
-        await this.stockRepository.save(stock);
       }
     }
 

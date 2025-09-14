@@ -1,4 +1,5 @@
 import { IsEnum, IsNotEmpty, IsUUID, Min } from 'class-validator';
+import { OrderStatus } from 'src/constants/order_status.enum';
 import { OrderType } from 'src/constants/order_type.enum';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
 
@@ -38,4 +39,22 @@ export class OrderCheckOutRequestDto {
   @IsNotEmpty()
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
+}
+
+export class ChangeOrderAddressRequestDto {
+  @IsNotEmpty()
+  @IsUUID()
+  addressId: string;
+}
+
+export class OrderIdRequestDto {
+  @IsNotEmpty()
+  @IsUUID()
+  orderId: string;
+}
+
+export class OrderStatusRequestDto {
+  @IsNotEmpty()
+  @IsEnum(OrderStatus)
+  status: OrderStatus;
 }

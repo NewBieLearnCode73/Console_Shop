@@ -6,6 +6,7 @@ export class ProductResponseDto {
   name: string;
   description: string;
   product_type: ProductType;
+  weight: number; // in grams
   status: ProductStatus;
   slug: string;
   seo_title?: string;

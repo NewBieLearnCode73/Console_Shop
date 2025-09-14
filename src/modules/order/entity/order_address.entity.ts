@@ -20,7 +20,7 @@ export class OrderAddress extends AbstractEntity<OrderAddress> {
   to_ward_code: string;
 
   @Column()
-  to_district_id: string;
+  to_district_id: number;
 
   @Column()
   to_province_name: string;

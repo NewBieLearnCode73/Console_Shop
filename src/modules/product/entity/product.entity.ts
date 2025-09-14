@@ -46,6 +46,9 @@ export class Product extends AbstractEntity<Product> implements SeoType {
   seo_description?: string;
   // SEO fields end
 
+  @Column({ default: 0 })
+  weight: number; // in grams
+
   @ManyToOne(() => Category, (category) => category.products, {
     onDelete: 'CASCADE',
     nullable: false,

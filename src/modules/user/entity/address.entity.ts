@@ -20,7 +20,7 @@ export class Address extends AbstractEntity<Address> {
   to_ward_code: string;
 
   @Column()
-  to_district_id: string;
+  to_district_id: number;
 
   @Column()
   to_province_name: string;
