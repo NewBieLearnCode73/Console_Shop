@@ -42,7 +42,7 @@ export class CartService {
     for (const item of items) {
       const variant = await this.productVariantRepository.findOne({
         where: { id: item.product_variant_id },
-        relations: ['images'],
+        relations: ['images', 'product'],
       });
       if (variant) {
         item['name'] = variant.variant_name;
@@ -51,6 +51,7 @@ export class CartService {
         )[0].product_url;
         item['price'] = variant.price;
         item['discount'] = variant.discount;
+        item['productStatus'] = variant.product.status;
       }
     }
 
@@ -126,20 +127,6 @@ export class CartService {
         'Only 1 digital key of variant can be added to the cart! Cart already has this item.',
       );
     } else if (item) {
-      // Check stock
-      // const isQuantityValid = await this.stockRepository.findOne({
-      //   where: {
-      //     variant: { id: productVariantId },
-      //     quantity: MoreThanOrEqual(item.quantity + quantity),
-      //   },
-      // });
-
-      // if (!isQuantityValid) {
-      //   throw new BadRequestException('Please enter a valid quantity');
-      // }
-
-      // item.quantity += quantity;
-
       throw new BadRequestException(
         'Item already in cart, please use update cart feature to change quantity.',
       );
@@ -176,6 +163,18 @@ export class CartService {
       throw new BadRequestException('Item not found in cart');
     }
 
+    const productVariantIsValid = await this.productVariantRepository.findOne({
+      where: {
+        id: productVariantId,
+        product: { status: ProductStatus.ACTIVE },
+      },
+      relations: ['product'],
+    });
+
+    if (!productVariantIsValid) {
+      throw new BadRequestException('Product variant not found or Inactive!');
+    }
+
     const isQuantityValid = await this.stockRepository.findOne({
       where: {
         variant: { id: productVariantId },
@@ -192,11 +191,7 @@ export class CartService {
     await this.cartItemRepository.save(item);
   }
 
-  async removeItemFromCart(
-    userId: string,
-    productVariantId: string,
-    quantity: number,
-  ) {
+  async removeItemFromCart(userId: string, productVariantId: string) {
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['items'],
@@ -214,13 +209,7 @@ export class CartService {
       throw new BadRequestException('Item not found in cart');
     }
 
-    item.quantity -= quantity;
-
-    if (item.quantity <= 0) {
-      await this.cartItemRepository.remove(item);
-    } else {
-      await this.cartItemRepository.save(item);
-    }
+    await this.cartItemRepository.remove(item);
   }
 
   async clearCart(userId: string) {
@@ -235,6 +224,33 @@ export class CartService {
 
     await this.cartItemRepository.remove(cart.items);
     cart.items = [];
+    await this.cartRepository.save(cart);
+  }
+
+  async removeMultipleItemsFromCart(
+    userId: string,
+    productVariantIds: string[],
+  ) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items'],
+    });
+
+    if (!cart) {
+      throw new BadRequestException('Cart not found');
+    }
+    const itemsToRemove = cart.items.filter((item) =>
+      productVariantIds.includes(item.product_variant_id),
+    );
+
+    if (itemsToRemove.length === 0) {
+      throw new BadRequestException('No items found in cart to remove');
+    }
+
+    await this.cartItemRepository.remove(itemsToRemove);
+    cart.items = cart.items.filter(
+      (item) => !productVariantIds.includes(item.product_variant_id),
+    );
     await this.cartRepository.save(cart);
   }
 }

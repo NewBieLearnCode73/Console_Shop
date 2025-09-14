@@ -14,8 +14,8 @@ export class Payment extends AbstractEntity<Payment> {
   @Column({ type: 'enum', enum: PaymentStatus })
   status: PaymentStatus;
 
-  @Column({ unique: true })
-  trans_id: string; // Momo
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  trans_id: string | null;
 
   @Column({ unique: true })
   order_id: string;
@@ -23,6 +23,6 @@ export class Payment extends AbstractEntity<Payment> {
   @Column()
   amount: number;
 
-  @Column()
-  paid_at: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  paid_at: Date | null;
 }

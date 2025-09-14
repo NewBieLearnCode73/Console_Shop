@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Patch,
   Post,
   Put,
   Query,
@@ -15,6 +16,7 @@ import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
   AddItemToCartRequestDto,
   RemoveItemFromCartRequestDto,
+  RemoveMultipleItemsFromCartRequestDto,
 } from '../dto/request/cart-request.dto';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
@@ -70,7 +72,18 @@ export class CartController {
     return this.cartService.removeItemFromCart(
       req.user.id,
       removeItemFromCartRequestDto.productVariantId,
-      removeItemFromCartRequestDto.quantity,
+    );
+  }
+
+  @Patch('remove-multiple')
+  @UseGuards(JwtCookieAuthGuard)
+  async removeMultipleFromCart(
+    @Req() req: AuthenticationRequest,
+    @Body() removeItemFromCartRequestDto: RemoveMultipleItemsFromCartRequestDto,
+  ) {
+    return this.cartService.removeMultipleItemsFromCart(
+      req.user.id,
+      removeItemFromCartRequestDto.productVariantIds,
     );
   }
 

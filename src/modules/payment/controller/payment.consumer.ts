@@ -30,9 +30,9 @@ export class PaymentConsumer {
       orderId: string;
       amount: number;
       method: PaymentMethod;
-      trans_id: string;
+      trans_id: string | null;
       status: PaymentStatus;
-      paid_at: Date;
+      paid_at: Date | null;
     },
   ) {
     await this.paymentService.createPaymentRecord(payload);

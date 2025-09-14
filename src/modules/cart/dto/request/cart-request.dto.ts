@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsUUID, Min } from 'class-validator';
+import { IsArray, IsNotEmpty, IsUUID, Min } from 'class-validator';
 
 export class AddItemToCartRequestDto {
   @IsNotEmpty()
@@ -16,9 +16,11 @@ export class RemoveItemFromCartRequestDto {
   @IsNotEmpty()
   @IsUUID()
   productVariantId: string;
+}
 
-  @Transform(({ value }) => parseInt(value))
+export class RemoveMultipleItemsFromCartRequestDto {
   @IsNotEmpty()
-  @Min(1)
-  quantity: number;
+  @IsArray()
+  @IsUUID('all', { each: true })
+  productVariantIds: string[];
 }

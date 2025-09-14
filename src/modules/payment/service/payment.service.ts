@@ -159,16 +159,16 @@ export class PaymentService {
     orderId: string;
     amount: number;
     method: PaymentMethod;
-    trans_id: string;
+    trans_id: string | null;
     status: PaymentStatus;
-    paid_at: Date;
+    paid_at: Date | null;
   }) {
     console.log('Creating payment record:', data);
 
     const payment = this.paymentRepository.create({
-      amount: data.amount,
       method: data.method,
       order_id: data.orderId,
+      amount: data.amount,
       paid_at: data.paid_at,
       status: data.status,
       trans_id: data.trans_id,

@@ -28,6 +28,7 @@ import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { OrderShippingResponseDto } from '../dto/response/order-response.dto';
 import { GhnService } from 'src/modules/giaohangnhanh/service/ghn.service';
+import { PaymentStatus } from 'src/constants/payment_status.enum';
 
 @Injectable()
 export class OrderService {
@@ -725,6 +726,16 @@ export class OrderService {
     order.status = OrderStatus.SHIPPED;
     order.order_code = result.order_code;
     await this.orderRepository.save(order);
+
+    // Tạo payment record
+    this.kafkaService.sendEvent('create_payment_record', {
+      orderId: order.id,
+      amount: Number(order.total_amount),
+      method: PaymentMethod.COD,
+      status: PaymentStatus.PENDING,
+      trans_id: null,
+      paid_at: null,
+    });
 
     return result;
   }
