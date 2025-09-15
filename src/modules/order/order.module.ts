@@ -14,6 +14,8 @@ import { KafkaService } from '../kafka/service/kafka.service';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 import { GiaohangnhanhModule } from '../giaohangnhanh/giaohangnhanh.module';
 import { Payment } from '../payment/entity/payment.entity';
+import { Cart } from '../cart/entity/cart.entity';
+import { CartModule } from '../cart/cart.module';
 
 @Module({
   imports: [
@@ -32,5 +34,6 @@ import { Payment } from '../payment/entity/payment.entity';
   ],
   controllers: [OrderController],
   providers: [OrderService, KafkaService, JwtCookieAuthGuard],
+  exports: [OrderService],
 })
 export class OrderModule {}

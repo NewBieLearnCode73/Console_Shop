@@ -29,6 +29,7 @@ import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { OrderShippingResponseDto } from '../dto/response/order-response.dto';
 import { GhnService } from 'src/modules/giaohangnhanh/service/ghn.service';
 import { PaymentStatus } from 'src/constants/payment_status.enum';
+import { OrderCheckoutCartRequestDto } from '../dto/request/order-request.dto';
 
 @Injectable()
 export class OrderService {
@@ -171,13 +172,6 @@ export class OrderService {
 
       console.log('Momo Payment Created:', savedOrder.id);
 
-      setTimeout(
-        async () => {
-          await this.autoFailedOrder(savedOrder.id);
-        },
-        100 * 60 * 1000,
-      );
-
       return savedOrder;
     });
 
@@ -308,7 +302,7 @@ export class OrderService {
         stock.reserved += quantity;
         await manager.getRepository(Stock).save(stock);
 
-        const orderItem = await manager.getRepository(OrderItem).create({
+        const orderItem = manager.getRepository(OrderItem).create({
           quantity,
           price: productVariant.price,
           productVariant,
@@ -454,16 +448,261 @@ export class OrderService {
           expired_at: orderProp.expired_at,
         });
 
-        const savedOrder = await manager.getRepository(Order).save(order);
+        const result = await manager.getRepository(Order).save(order);
 
         this.kafkaService.sendEvent('create_momo_payment', {
-          orderId: savedOrder.id,
-          amount: savedOrder.total_amount,
+          orderId: result.id,
+          amount: result.total_amount,
         });
       });
     } else {
       throw new BadRequestException('Invalid payment method!');
     }
+
+    return savedOrder;
+  }
+
+  async checkoutCartPhysicalProduct(
+    userId: string,
+    addressId: string,
+    paymentMethod: PaymentMethod,
+    orderCheckoutCartRequestDto: OrderCheckoutCartRequestDto[],
+  ) {
+    // Không check user, address , payment method vì đã check ở bước trước
+
+    const address = await this.addressRepository.findOne({
+      where: { id: addressId, user: { id: userId } },
+    });
+    if (!address) throw new BadRequestException('Address not found!');
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found!');
+
+    let sub_total = 0;
+    let discount_amount = 0;
+    let total_weight = 0;
+    const order_items: OrderItem[] = [];
+    const savedOrder = await this.dataSource.transaction(async (manager) => {
+      // ********************************** THANH TOÁN COD *******************************
+      if (paymentMethod === PaymentMethod.COD) {
+        for (const item of orderCheckoutCartRequestDto) {
+          const { productVariantId, quantity } = item;
+
+          const productVariant = await this.productVariantRepository.findOne({
+            where: {
+              id: productVariantId,
+              product: { status: ProductStatus.ACTIVE },
+            },
+            relations: ['product'],
+          });
+
+          if (!productVariant)
+            throw new BadRequestException('Product variant not found!');
+
+          const stock = await manager
+            .getRepository(Stock)
+            .createQueryBuilder('stock')
+            .setLock('pessimistic_write')
+            .innerJoinAndSelect('stock.variant', 'variant')
+            .andWhere('variant.id = :variantId', {
+              variantId: productVariantId,
+            })
+            .getOne();
+
+          if (!stock)
+            throw new BadRequestException(
+              'Stock information not found for product variant!',
+            );
+
+          const available = stock.quantity - stock.reserved;
+
+          if (available < quantity)
+            throw new BadRequestException(
+              'Insufficient stock for product variant!',
+            );
+          stock.reserved += quantity;
+          await manager.getRepository(Stock).save(stock);
+
+          const orderItem = manager.getRepository(OrderItem).create({
+            quantity,
+            price: productVariant.price,
+            productVariant,
+          });
+
+          order_items.push(orderItem);
+
+          const discount = productVariant.discount / 100;
+          discount_amount += orderItem.price * orderItem.quantity * discount;
+          sub_total += orderItem.price * orderItem.quantity;
+          total_weight += productVariant.product.weight * orderItem.quantity;
+        }
+
+        const shipping_fee = await this.ghnService.calculateShippingFee(
+          address.to_district_id,
+          address.to_ward_code,
+          2,
+          0,
+          total_weight,
+          0,
+          0,
+          sub_total,
+        );
+
+        const orderProp = {
+          status: OrderStatus.PENDING_CONFIRMATION,
+          sub_total,
+          discount_amount: Number(discount_amount),
+          order_type: OrderType.PHYSICAL,
+          orderItems: order_items,
+          total_amount: sub_total - discount_amount + shipping_fee.service_fee,
+        };
+
+        const orderAddress = manager.getRepository(OrderAddress).create({
+          to_address: address.to_address,
+          to_district_id: address.to_district_id,
+          to_name: address.to_name,
+          to_phone: address.to_phone,
+          to_province_name: address.to_province_name,
+          to_ward_code: address.to_ward_code,
+        });
+
+        const savedOrderAddress = await manager
+          .getRepository(OrderAddress)
+          .save(orderAddress);
+
+        const order = manager.getRepository(Order).create({
+          status: orderProp.status,
+          sub_total: orderProp.sub_total,
+          discount_amount: orderProp.discount_amount,
+          order_type: orderProp.order_type,
+          orderItems: orderProp.orderItems,
+          total_amount: orderProp.total_amount,
+          orderAddress: savedOrderAddress,
+          shipping_fee: shipping_fee.service_fee,
+          user,
+        });
+
+        const result = await manager.getRepository(Order).save(order);
+        return result;
+      }
+
+      // ********************************** THANH TOÁN MOMO *******************************
+      if (paymentMethod === PaymentMethod.MOMO_WALLET) {
+        for (const item of orderCheckoutCartRequestDto) {
+          const { productVariantId, quantity } = item;
+
+          const productVariant = await this.productVariantRepository.findOne({
+            where: {
+              id: productVariantId,
+              product: { status: ProductStatus.ACTIVE },
+            },
+            relations: ['product'],
+          });
+
+          if (!productVariant)
+            throw new BadRequestException('Product variant not found!');
+
+          const stock = await manager
+            .getRepository(Stock)
+            .createQueryBuilder('stock')
+            .setLock('pessimistic_write')
+            .innerJoinAndSelect('stock.variant', 'variant')
+            .andWhere('variant.id = :variantId', {
+              variantId: productVariantId,
+            })
+            .getOne();
+
+          if (!stock)
+            throw new BadRequestException(
+              'Stock information not found for product variant!',
+            );
+
+          const available = stock.quantity - stock.reserved;
+          if (available < quantity)
+            throw new BadRequestException(
+              'Insufficient stock for product variant!',
+            );
+
+          stock.reserved += quantity;
+          await manager.getRepository(Stock).save(stock);
+
+          const orderItem = await manager.getRepository(OrderItem).create({
+            quantity,
+            price: productVariant.price,
+            productVariant,
+          });
+
+          order_items.push(orderItem);
+
+          const discount = productVariant.discount / 100;
+          discount_amount += orderItem.price * orderItem.quantity * discount;
+          sub_total += orderItem.price * orderItem.quantity;
+          total_weight += productVariant.product.weight * orderItem.quantity;
+        }
+
+        const shipping_fee = await this.ghnService.calculateShippingFee(
+          address.to_district_id,
+          address.to_ward_code,
+          2,
+          0,
+          total_weight,
+          0,
+          0,
+          sub_total,
+        );
+
+        const expiredAt = new Date();
+        expiredAt.setMinutes(expiredAt.getMinutes() + 100);
+
+        const orderProp = {
+          status: OrderStatus.PENDING_PAYMENT,
+          sub_total,
+          discount_amount: Number(discount_amount),
+          order_type: OrderType.PHYSICAL,
+          orderIteams: order_items,
+          total_amount: sub_total - discount_amount + shipping_fee.service_fee,
+          declareation_fee: 0,
+          expired_at: expiredAt,
+        };
+
+        const orderAddress = manager.getRepository(OrderAddress).create({
+          to_address: address.to_address,
+          to_district_id: address.to_district_id,
+          to_name: address.to_name,
+          to_phone: address.to_phone,
+          to_province_name: address.to_province_name,
+          to_ward_code: address.to_ward_code,
+        });
+
+        const savedOrderAddress = await manager
+          .getRepository(OrderAddress)
+          .save(orderAddress);
+
+        const order = manager.getRepository(Order).create({
+          status: orderProp.status,
+          sub_total: orderProp.sub_total,
+          discount_amount: orderProp.discount_amount,
+          order_type: orderProp.order_type,
+          orderItems: orderProp.orderIteams,
+          total_amount: orderProp.total_amount,
+          shipping_fee: shipping_fee.service_fee,
+          orderAddress: savedOrderAddress,
+          user,
+          expired_at: orderProp.expired_at,
+        });
+
+        const result = await manager.getRepository(Order).save(order);
+
+        console.log('Momo Payment Created:', result.id);
+
+        this.kafkaService.sendEvent('create_momo_payment', {
+          orderId: result.id,
+          amount: result.total_amount,
+        });
+
+        return result;
+      }
+    });
 
     return savedOrder;
   }
@@ -685,29 +924,24 @@ export class OrderService {
       }),
     };
 
-    const stock = await this.stockRepository.findOne({
-      where: { variant: { id: order.orderItems[0].productVariant.id } },
-    });
+    for (const item of order.orderItems) {
+      const stock = await this.stockRepository.findOne({
+        where: { variant: { id: item.productVariant.id } },
+      });
 
-    if (!stock) throw new BadRequestException('Stock information not found!');
+      if (!stock) throw new BadRequestException('Stock information not found!');
 
-    console.log('Stock before shipping:', stock);
+      console.log('Stock before shipping:', stock);
 
-    if (stock) {
-      stock.reserved = Math.max(
-        0,
-        stock.reserved - order.orderItems[0].quantity,
-      );
+      if (stock) {
+        stock.reserved = Math.max(0, stock.reserved - item.quantity);
+        stock.quantity = Math.max(0, stock.quantity - item.quantity);
+      }
 
-      stock.quantity = Math.max(
-        0,
-        stock.quantity - order.orderItems[0].quantity,
-      );
+      console.log('Stock after shipping:', stock);
+
+      await this.stockRepository.save(stock);
     }
-
-    console.log('Stock after shipping:', stock);
-
-    await this.stockRepository.save(stock);
 
     const result = await this.ghnService.createOrder({
       order_id: responseOrder.orderId,

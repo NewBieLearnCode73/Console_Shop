@@ -15,6 +15,7 @@ import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
   AddItemToCartRequestDto,
+  CheckOutAddressRequestDto,
   RemoveItemFromCartRequestDto,
   RemoveMultipleItemsFromCartRequestDto,
 } from '../dto/request/cart-request.dto';
@@ -24,8 +25,6 @@ import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  // THÊM ENDPOINTS PUT -  Thêm sản phẩm vào giỏ hàng
-
   // Sửa lại giỏ hàng - Sản phẩm bị inactive hoặc hết hàng
   @Get()
   @UseGuards(JwtCookieAuthGuard)
@@ -34,6 +33,19 @@ export class CartController {
     @Query() paginationRequestDto: PaginationRequestDto,
   ) {
     return this.cartService.getCart(req.user.id, paginationRequestDto);
+  }
+
+  @Get('checkout-physical')
+  @UseGuards(JwtCookieAuthGuard)
+  async getCartForCheckoutPhysical(
+    @Req() req: AuthenticationRequest,
+    @Body() checkOutAddressRequestDto: CheckOutAddressRequestDto,
+  ) {
+    return this.cartService.checkoutPhysicalProductsInCart(
+      req.user.id,
+      checkOutAddressRequestDto.addressId,
+      checkOutAddressRequestDto.paymentMethod,
+    );
   }
 
   // SỬA LẠI SẢN PHẨM TRONG GIỎ HÀNG - SẢN PHẨM BỊ INACTIVE HOẶC HẾT HÀNG

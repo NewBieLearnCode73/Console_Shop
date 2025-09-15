@@ -1,7 +1,6 @@
 import { AbstractEntity } from 'src/abstracts/abstract_entity';
 import { User } from 'src/modules/user/entity/user.entity';
 import {
-  Column,
   Entity,
   JoinColumn,
   OneToMany,

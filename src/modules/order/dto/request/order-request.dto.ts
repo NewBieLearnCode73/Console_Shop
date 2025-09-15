@@ -27,6 +27,16 @@ export class OrderPhysicalBuyNowRequestDto {
   paymentMethod: PaymentMethod;
 }
 
+export class OrderCheckoutCartRequestDto {
+  @IsNotEmpty()
+  @IsUUID()
+  productVariantId: string;
+
+  @IsNotEmpty()
+  @Min(1)
+  quantity: number;
+}
+
 export class OrderCheckOutRequestDto {
   @IsNotEmpty()
   @IsEnum(OrderType)

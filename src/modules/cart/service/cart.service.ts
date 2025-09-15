@@ -11,6 +11,13 @@ import { Stock } from 'src/modules/product/entity/stock.entity';
 import { Product } from 'src/modules/product/entity/product.entity';
 import { ProductType } from 'src/constants/product_type.enum';
 import { ProductStatus } from 'src/constants/product_status.enum';
+import { Address } from 'src/modules/user/entity/address.entity';
+import { PaymentMethod } from 'src/constants/payment_method.enum';
+import {
+  OrderCheckoutCartRequestDto,
+  OrderCheckOutRequestDto,
+} from '../../order/dto/request/order-request.dto';
+import { OrderService } from 'src/modules/order/service/order.service';
 
 @Injectable()
 export class CartService {
@@ -27,6 +34,9 @@ export class CartService {
     private readonly productVariantRepository: Repository<ProductVariant>,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(Address)
+    private readonly addressRepository: Repository<Address>,
+    private readonly orderService: OrderService,
   ) {}
 
   async getCart(userId: string, paginationRequestDto: PaginationRequestDto) {
@@ -252,5 +262,104 @@ export class CartService {
       (item) => !productVariantIds.includes(item.product_variant_id),
     );
     await this.cartRepository.save(cart);
+  }
+
+  async checkoutCart(userId: string) {
+    const items = await this.cartItemRepository.find({
+      where: { cart: { user: { id: userId } } },
+    });
+
+    if (!items) {
+      throw new BadRequestException('Cart not found');
+    }
+
+    for (const item of items) {
+      const variant = await this.productVariantRepository.findOne({
+        where: { id: item.product_variant_id },
+        relations: ['images', 'product'],
+      });
+      if (variant) {
+        item['name'] = variant.variant_name;
+        item['imageUrl'] = variant.images.filter(
+          (img) => img.is_main,
+        )[0].product_url;
+        item['price'] = variant.price;
+        item['discount'] = variant.discount;
+        item['productStatus'] = variant.product.status;
+
+        if (item['productStatus'] !== ProductStatus.ACTIVE) {
+          throw new BadRequestException(
+            `Some products in your cart are not active. Please review your cart before proceeding to checkout.`,
+          );
+        }
+      }
+    }
+
+    return items;
+  }
+
+  async checkoutPhysicalProductsInCart(
+    userId: string,
+    addressId: string,
+    paymentMethod: PaymentMethod,
+  ) {
+    const address = await this.addressRepository.findOne({
+      where: { id: addressId, user: { id: userId } },
+    });
+
+    if (!address) {
+      throw new BadRequestException('Invalid address');
+    }
+
+    const items = await this.checkoutCart(userId);
+
+    const variants = await Promise.all(
+      items.map((item) =>
+        this.productVariantRepository
+          .findOne({
+            where: { id: item.product_variant_id },
+            relations: ['product', 'stock'],
+          })
+          .then((variant) => ({ item, variant })),
+      ),
+    );
+
+    console.log(`Variants in User ${userId} Cart:`, variants);
+
+    const physicalProducts = variants.filter(({ item, variant }) => {
+      if (
+        variant?.product.product_type === ProductType.CARD_PHYSICAL ||
+        variant?.product.product_type === ProductType.DEVICE
+      ) {
+        if (variant?.stock.quantity - variant?.stock.reserved < item.quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for product variant ${variant?.variant_name}. Available stock: ${variant?.stock.quantity - variant?.stock.reserved}, Requested quantity: ${item.quantity}`,
+          );
+        }
+        return true;
+      }
+      return false;
+    });
+
+    if (physicalProducts.length === 0) {
+      throw new BadRequestException(
+        'No physical products in cart to checkout.',
+      );
+    }
+
+    const orderCheckoutRequestDto: OrderCheckoutCartRequestDto[] =
+      physicalProducts.map(({ item }) => ({
+        productVariantId: item.product_variant_id,
+        quantity: item.quantity,
+      }));
+
+    await this.orderService.checkoutCartPhysicalProduct(
+      userId,
+      addressId,
+      paymentMethod,
+      orderCheckoutRequestDto,
+    );
+
+    return physicalProducts;
   }
 }
