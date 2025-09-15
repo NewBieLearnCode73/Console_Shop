@@ -119,7 +119,7 @@ export class ProductVariantService {
           status: In([ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK]),
         },
       },
-      relations: ['product', 'images'],
+      relations: ['product', 'images', 'stock'],
     });
 
     if (!variants || variants.length === 0) {
