@@ -63,6 +63,16 @@ export class OrderIdRequestDto {
   orderId: string;
 }
 
+export class OrderDigitalKeyRequestDto {
+  @IsNotEmpty()
+  @IsUUID()
+  orderId: string;
+
+  @IsNotEmpty()
+  @IsUUID()
+  product_variant_id: string;
+}
+
 export class OrderStatusRequestDto {
   @IsNotEmpty()
   @IsEnum(OrderStatus)

@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsArray, IsEnum, IsNotEmpty, IsUUID, Min } from 'class-validator';
+import { CartType } from 'src/constants/cart_type.enum';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
 
 export class AddItemToCartRequestDto {
@@ -34,4 +35,10 @@ export class CheckOutAddressRequestDto {
   @IsNotEmpty()
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
+}
+
+export class CartTypeRequestDto {
+  @IsNotEmpty()
+  @IsEnum(CartType)
+  cartType: CartType;
 }

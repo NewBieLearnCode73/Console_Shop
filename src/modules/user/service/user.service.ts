@@ -15,6 +15,8 @@ import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { UserWithProfileResponseDto } from '../dto/response/user-response.dto';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import * as bcrypt from 'bcrypt';
+import { KafkaService } from 'src/modules/kafka/service/kafka.service';
 
 @Injectable()
 export class UserService {
@@ -22,7 +24,8 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRedis() private readonly redis: Redis,
-  ) { }
+    private readonly kafkaService: KafkaService,
+  ) {}
 
   async findUserWithProfile(userId: string) {
     if (!isUUID(userId)) {
@@ -40,6 +43,7 @@ export class UserService {
           fullname: true,
           avatar_url: true,
         },
+        email: true,
       },
     });
 
@@ -64,6 +68,7 @@ export class UserService {
           fullname: true,
           avatar_url: true,
         },
+        email: true,
       },
       skip: (page - 1) * limit,
       take: limit,
@@ -91,6 +96,7 @@ export class UserService {
           fullname: true,
           avatar_url: true,
         },
+        email: true,
       },
       where: { role: Role.CUSTOMER },
       skip: (page - 1) * limit,
@@ -125,6 +131,7 @@ export class UserService {
           fullname: true,
           avatar_url: true,
         },
+        email: true,
       },
     });
   }
@@ -171,6 +178,54 @@ export class UserService {
     const { password, ...result } = updateUser;
 
     return result;
+  }
+
+  async hashPassword(password: string) {
+    const salt = await bcrypt.genSalt(10);
+    return bcrypt.hash(password, salt);
+  }
+
+  generateRandomPassword(length: number = 12) {
+    const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numberChars = '0123456789';
+    const symbolChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+    const allChars =
+      lowercaseChars + uppercaseChars + numberChars + symbolChars;
+    let password = '';
+
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * allChars.length);
+      password += allChars.charAt(randomIndex);
+    }
+
+    return password;
+  }
+
+  async sendPasswordToUserEmail(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found!`);
+    }
+
+    if (user.is_active === false) {
+      throw new ConflictException(`User with id ${userId} was not actived!`);
+    }
+
+    const newPassword = this.generateRandomPassword(12);
+
+    user.password = await this.hashPassword(newPassword);
+
+    await this.userRepository.save(user);
+
+    // Envent send mail to user
+    this.kafkaService.sendEvent('send_mail_provide_new_password', {
+      userId: user.id,
+      email: user.email,
+      newPassword: newPassword,
+    });
   }
 
   async activeUserIsCustomerById(userId: string) {

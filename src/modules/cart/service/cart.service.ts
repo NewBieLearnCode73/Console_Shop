@@ -13,11 +13,9 @@ import { ProductType } from 'src/constants/product_type.enum';
 import { ProductStatus } from 'src/constants/product_status.enum';
 import { Address } from 'src/modules/user/entity/address.entity';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
-import {
-  OrderCheckoutCartRequestDto,
-  OrderCheckOutRequestDto,
-} from '../../order/dto/request/order-request.dto';
+import { OrderCheckoutCartRequestDto } from '../../order/dto/request/order-request.dto';
 import { OrderService } from 'src/modules/order/service/order.service';
+import { CartType } from 'src/constants/cart_type.enum';
 
 @Injectable()
 export class CartService {
@@ -39,7 +37,11 @@ export class CartService {
     private readonly orderService: OrderService,
   ) {}
 
-  async getCart(userId: string, paginationRequestDto: PaginationRequestDto) {
+  async getCart(
+    userId: string,
+    paginationRequestDto: PaginationRequestDto,
+    cartType: CartType,
+  ) {
     const { page, limit } = paginationRequestDto;
 
     const [items, total] = await this.cartItemRepository.findAndCount({
@@ -62,10 +64,34 @@ export class CartService {
         item['price'] = variant.price;
         item['discount'] = variant.discount;
         item['productStatus'] = variant.product.status;
+
+        if (
+          (cartType === CartType.PHYSICAL &&
+            variant.product.product_type === ProductType.CARD_PHYSICAL) ||
+          variant.product.product_type === ProductType.DEVICE
+        ) {
+          item['cartType'] = CartType.PHYSICAL;
+        }
+
+        if (
+          cartType === CartType.DIGITAL &&
+          variant.product.product_type === ProductType.CARD_DIGITAL_KEY
+        ) {
+          item['cartType'] = 'DIGITAL';
+        }
       }
     }
 
-    return PaginationResult(items, total, page, limit);
+    const newFilteredItems = items.filter(
+      (item) => item['cartType'] === cartType,
+    );
+
+    return PaginationResult(
+      newFilteredItems,
+      newFilteredItems.length,
+      page,
+      limit,
+    );
   }
 
   async addItemToCart(
@@ -185,15 +211,29 @@ export class CartService {
       throw new BadRequestException('Product variant not found or Inactive!');
     }
 
-    const isQuantityValid = await this.stockRepository.findOne({
-      where: {
-        variant: { id: productVariantId },
-        quantity: MoreThanOrEqual(quantity),
-      },
+    // const isQuantityValid = await this.stockRepository.findOne({
+    //   where: {
+    //     variant: { id: productVariantId },
+    //     quantity: MoreThanOrEqual(quantity),
+    //   },
+    // });
+
+    // if (!isQuantityValid) {
+    //   throw new BadRequestException('Please enter a valid quantity');
+    // }
+
+    const stock = await this.stockRepository.findOne({
+      where: { variant: { id: productVariantId } },
     });
 
-    if (!isQuantityValid) {
-      throw new BadRequestException('Please enter a valid quantity');
+    if (!stock) {
+      throw new BadRequestException('Stock not found');
+    }
+
+    if (quantity > stock.quantity - stock.reserved) {
+      throw new BadRequestException(
+        `Insufficient stock. Available: ${stock.quantity - stock.reserved}, Requested: ${quantity}`,
+      );
     }
 
     item.quantity = quantity;
@@ -361,5 +401,42 @@ export class CartService {
     );
 
     return physicalProducts;
+  }
+
+  async checkoutDigitalProductsInCart(userId: string) {
+    const items = await this.checkoutCart(userId);
+
+    const variants = await Promise.all(
+      items.map((item) =>
+        this.productVariantRepository
+          .findOne({
+            where: { id: item.product_variant_id },
+            relations: ['product'],
+          })
+          .then((variant) => ({ item, variant })),
+      ),
+    );
+
+    const digitalProducts = variants.filter(
+      ({ variant }) =>
+        variant?.product.product_type === ProductType.CARD_DIGITAL_KEY,
+    );
+
+    if (digitalProducts.length === 0) {
+      throw new BadRequestException('No digital products in cart to checkout.');
+    }
+
+    const orderCheckoutRequestDto: OrderCheckoutCartRequestDto[] =
+      digitalProducts.map(({ item }) => ({
+        productVariantId: item.product_variant_id,
+        quantity: item.quantity,
+      }));
+
+    const savedOrder = await this.orderService.checkOutCartDigitalProduct(
+      userId,
+      orderCheckoutRequestDto,
+    );
+
+    return savedOrder;
   }
 }

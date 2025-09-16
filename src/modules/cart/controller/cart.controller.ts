@@ -15,6 +15,7 @@ import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
   AddItemToCartRequestDto,
+  CartTypeRequestDto,
   CheckOutAddressRequestDto,
   RemoveItemFromCartRequestDto,
   RemoveMultipleItemsFromCartRequestDto,
@@ -31,8 +32,13 @@ export class CartController {
   async getCart(
     @Req() req: AuthenticationRequest,
     @Query() paginationRequestDto: PaginationRequestDto,
+    @Query() cartTypeRequestDto: CartTypeRequestDto,
   ) {
-    return this.cartService.getCart(req.user.id, paginationRequestDto);
+    return this.cartService.getCart(
+      req.user.id,
+      paginationRequestDto,
+      cartTypeRequestDto.cartType,
+    );
   }
 
   @Get('checkout-physical')
@@ -46,6 +52,12 @@ export class CartController {
       checkOutAddressRequestDto.addressId,
       checkOutAddressRequestDto.paymentMethod,
     );
+  }
+
+  @Get('checkout-digital')
+  @UseGuards(JwtCookieAuthGuard)
+  async getCartForCheckoutDigital(@Req() req: AuthenticationRequest) {
+    return this.cartService.checkoutDigitalProductsInCart(req.user.id);
   }
 
   // SỬA LẠI SẢN PHẨM TRONG GIỎ HÀNG - SẢN PHẨM BỊ INACTIVE HOẶC HẾT HÀNG

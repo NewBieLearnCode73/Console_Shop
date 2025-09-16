@@ -54,10 +54,18 @@ export class OrderService {
     @InjectRedis() private readonly redis: Redis,
   ) {}
   // Get digital keys for an order
-  async getDigitalKeys(userId: string, orderId: string) {
+  async getDigitalKeys(
+    userId: string,
+    orderId: string,
+    product_variant_id: string,
+  ) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId, user: { id: userId } },
-      relations: ['orderItems', 'orderItems.digitalKey'],
+      relations: [
+        'orderItems',
+        'orderItems.digitalKey',
+        'orderItems.productVariant',
+      ],
     });
     if (!order)
       throw new BadRequestException('Order not found! Or not your order');
@@ -68,7 +76,10 @@ export class OrderService {
 
     // Return only items with digital keys
     const digital_key = order.orderItems
-      .filter((item) => item.digitalKey)
+      .filter(
+        (item) =>
+          item.digitalKey && item.productVariant.id === product_variant_id,
+      )
       .map((item) => item.digitalKey);
 
     return digital_key.map((key) => ({
@@ -171,6 +182,120 @@ export class OrderService {
       });
 
       console.log('Momo Payment Created:', savedOrder.id);
+
+      return savedOrder;
+    });
+
+    return savedOrder;
+  }
+
+  // Checkout cart
+  // Checkout cart (Digital products)
+  async checkOutCartDigitalProduct(
+    userId: string,
+    orderCheckoutRequestDto: OrderCheckoutCartRequestDto[],
+  ) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found!');
+
+    const savedOrder = await this.dataSource.transaction(async (manager) => {
+      let sub_total = 0;
+      const orderItems: OrderItem[] = [];
+
+      for (const item of orderCheckoutRequestDto) {
+        const { productVariantId } = item;
+
+        const productVariant = await this.productVariantRepository.findOne({
+          where: {
+            id: productVariantId,
+            product: { status: ProductStatus.ACTIVE },
+          },
+          relations: ['product'],
+        });
+
+        if (
+          !productVariant ||
+          productVariant.product.product_type !== ProductType.CARD_DIGITAL_KEY
+        ) {
+          throw new BadRequestException(
+            'Product variant not found or invalid digital product!',
+          );
+        }
+
+        // Stock lock
+        const stock = await manager
+          .getRepository(Stock)
+          .createQueryBuilder('stock')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('stock.variant', 'variant')
+          .andWhere('variant.id = :variantId', { variantId: productVariantId })
+          .getOne();
+
+        if (!stock)
+          throw new BadRequestException(
+            `Stock information not found for product variant ${productVariantId}!`,
+          );
+
+        const available = stock.quantity - stock.reserved;
+        if (available <= 0)
+          throw new BadRequestException(
+            `Insufficient stock for product variant ${productVariantId}!`,
+          );
+
+        stock.reserved += 1;
+        await manager.getRepository(Stock).save(stock);
+
+        // Digital key lock
+        const availableKey = await manager
+          .getRepository(DigitalKey)
+          .createQueryBuilder('digitalKey')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('digitalKey.variant', 'variant')
+          .andWhere('variant.id = :variantId', { variantId: productVariant.id })
+          .andWhere('digitalKey.status = :status', { status: KeyStatus.UNUSED })
+          .andWhere('digitalKey.orderItem IS NULL')
+          .getOne();
+
+        if (!availableKey)
+          throw new BadRequestException(
+            `No available digital keys for product variant ${productVariant.id} in stock!`,
+          );
+
+        const orderItem = await manager.getRepository(OrderItem).save({
+          quantity: 1,
+          price: productVariant.price,
+          productVariant,
+          digitalKey: availableKey,
+        });
+
+        orderItems.push(orderItem);
+        sub_total += orderItem.price * orderItem.quantity;
+      }
+
+      // Order info
+      const expiredAt = new Date();
+      expiredAt.setMinutes(expiredAt.getMinutes() + 100);
+
+      const order = manager.getRepository(Order).create({
+        status: OrderStatus.PENDING_PAYMENT,
+        sub_total,
+        shipping_fee: 0,
+        total_amount: sub_total,
+        order_type: OrderType.DIGITAL,
+        orderItems,
+        user,
+        expired_at: expiredAt,
+      });
+
+      const savedOrder = await manager.getRepository(Order).save(order);
+
+      // Send payment event (MoMo)
+      this.kafkaService.sendEvent('create_momo_payment', {
+        orderId: savedOrder.id,
+        amount: savedOrder.total_amount,
+      });
+
+      console.log('Momo Payment Created for Cart:', savedOrder.id);
 
       return savedOrder;
     });

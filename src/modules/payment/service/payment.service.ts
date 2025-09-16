@@ -176,5 +176,6 @@ export class PaymentService {
 
     await this.paymentRepository.save(payment);
     console.log('Payment record created:', payment);
+    return payment;
   }
 }

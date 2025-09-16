@@ -13,6 +13,7 @@ import {
 import {
   ChangeOrderAddressRequestDto,
   OrderDigitalBuyNowRequestDto,
+  OrderDigitalKeyRequestDto,
   OrderIdRequestDto,
   OrderPhysicalBuyNowRequestDto,
   OrderStatusRequestDto,
@@ -29,13 +30,17 @@ export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   //**********************FOR CUSTOMER - START******************************* */
-  @Get('/digital_keys/:orderId')
+  @Get('/digital_keys')
   @UseGuards(JwtCookieAuthGuard)
   async getDigitalKeys(
-    @Param() orderId: OrderIdRequestDto,
+    @Query() orderDigitalKeyRequestDto: OrderDigitalKeyRequestDto,
     @Req() req: AuthenticationRequest,
   ) {
-    return await this.orderService.getDigitalKeys(req.user.id, orderId.orderId);
+    return await this.orderService.getDigitalKeys(
+      req.user.id,
+      orderDigitalKeyRequestDto.orderId,
+      orderDigitalKeyRequestDto.product_variant_id,
+    );
   }
 
   @Get('/:orderId')

@@ -17,7 +17,10 @@ import { RolesGuard } from 'src/guards/role.guard';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 import type { Request as ExpressRequest } from 'express';
-import { ChangeUserRoleRequestDto } from '../dto/request/user-request.dto';
+import {
+  ChangeUserRoleRequestDto,
+  ProvideNewPasswordRequestDto,
+} from '../dto/request/user-request.dto';
 
 @Controller('api/users')
 export class UserController {
@@ -79,6 +82,14 @@ export class UserController {
     const access_token = req.cookies['access_token'];
 
     return this.userService.changeUserRoleById(access_token, id, role.role);
+  }
+
+  // Provide new password to user
+  @Patch('admin/gennerate-user-password')
+  @RolesDecorator([Role.ADMIN])
+  @UseGuards(JwtCookieAuthGuard, RolesGuard)
+  async resetUserPasswordById(@Body() id: ProvideNewPasswordRequestDto) {
+    return this.userService.sendPasswordToUserEmail(id.userId);
   }
 
   // *****************************************************************//

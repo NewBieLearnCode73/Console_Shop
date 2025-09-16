@@ -60,15 +60,15 @@ export class ProductVariantController {
     );
   }
 
-  // Get similar variants by variant id
-  @Get('/for-users-and-guests/similar/:id')
+  // Get similar variants by variant slug
+  @Get('/for-users-and-guests/similar/:slug')
   async getSimilarVariants(
-    @Param('id', ParseUUIDPipe) variantId: string,
+    @Param('slug') slug: string,
     @Query('limit') limit?: string,
   ) {
     const limitNumber = limit ? parseInt(limit, 10) : 8;
     return await this.productVariantService.getSimilarVariants(
-      variantId,
+      slug,
       limitNumber,
     );
   }

@@ -132,10 +132,10 @@ export class ProductVariantService {
     });
   }
 
-  async getSimilarVariants(variantId: string, limit: number = 8) {
+  async getSimilarVariants(slug: string, limit: number = 8) {
     const currentVariant = await this.productVariantRepository.findOne({
       where: {
-        id: variantId,
+        slug: slug,
         product: {
           status: In([ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK]),
         },
@@ -159,8 +159,8 @@ export class ProductVariantService {
       .leftJoinAndSelect('product.brand', 'brand')
       .leftJoinAndSelect('variant.images', 'images')
       .leftJoinAndSelect('variant.stock', 'stock')
-      .where('variant.id != :currentVariantId', {
-        currentVariantId: variantId,
+      .where('variant.slug != :currentVariantSlug', {
+        currentVariantSlug: slug,
       })
       .andWhere('product.product_type = :productType', { productType });
 

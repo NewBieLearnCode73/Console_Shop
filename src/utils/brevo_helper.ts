@@ -7,6 +7,69 @@ export interface BrevoEmailPayload {
   htmlContent: string;
 }
 
+export function BrevoTemplateProvidePassword(
+  email: string,
+  name: string,
+  password: string,
+) {
+  return {
+    sender: {
+      name: 'Console Shop Admin',
+      email: 'ndchieu73@gmail.com',
+    },
+    to: [
+      {
+        email,
+        name,
+      },
+    ],
+    subject: 'Your New Password',
+    htmlContent: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🛒 Console Shop</h1> 
+          <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Secure Shopping Platform</p>
+        </div>
+
+        <!-- Body -->
+        <div style="background: #ffffff; padding: 40px 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+          <h2 style="color: #495057; margin-top: 0;">Your New Password</h2>
+          <p style="color: #6c757d; line-height: 1.6; margin-bottom: 30px;">
+            Hi <strong>${name}</strong>,<br><br>
+            A new password has been generated for your Console Shop account.  
+            Please use the password below to log in:
+          </p>
+
+          <!-- Password Box -->
+          <div style="text-align: center; margin: 40px 0;">
+            <div style="display: inline-block; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px 30px; font-size: 18px; font-weight: bold; color: #212529; font-family: monospace;">
+              ${password}
+            </div>
+          </div>
+
+          <!-- Warning Box -->
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <p style="margin: 0; color: #856404; font-size: 14px;">
+              <strong>⚠️ Important:</strong> For security reasons, please change this password after logging in.
+            </p>
+          </div>
+
+          <!-- Footer Note -->
+          <p style="color: #6c757d; font-size: 14px; margin-bottom: 0;">
+            If you did not request a new password, please contact our support immediately.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+          <p style="color: #adb5bd; font-size: 12px; text-align: center; margin: 0;">
+            © 2025 Console Shop. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+  };
+}
+
 export function BrevoTempleteResetPassword(
   email: string,
   name: string,
@@ -173,6 +236,19 @@ export async function sendMailActiveAccount(
     email,
     name,
     activeLink,
+  );
+  return await BrevoAxios.post('/email', emailData);
+}
+
+export async function sendMailProvidePassword(
+  email: string,
+  name: string,
+  password: string,
+) {
+  const emailData: BrevoEmailPayload = BrevoTemplateProvidePassword(
+    email,
+    name,
+    password,
   );
   return await BrevoAxios.post('/email', emailData);
 }
