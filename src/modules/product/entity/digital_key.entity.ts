@@ -45,7 +45,8 @@ export class DigitalKey extends AbstractEntity<DigitalKey> {
   //Chỉ xóa key khi xóa product variant
   @OneToOne(() => OrderItem, (orderItem) => orderItem.digitalKey, {
     onDelete: 'SET NULL',
+    nullable: true,
   })
   @JoinColumn()
-  orderItem: OrderItem;
+  orderItem: OrderItem | null;
 }

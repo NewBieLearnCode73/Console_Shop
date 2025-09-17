@@ -306,13 +306,19 @@ export class OrderService {
   // Cancel order
   async autoFailedOrder(orderId: string) {
     try {
+      const digitalKeysToRelease: string[] = [];
+
       await this.dataSource.transaction(async (manager) => {
         const order = await manager.getRepository(Order).findOne({
           where: {
             id: orderId,
             status: OrderStatus.PENDING_PAYMENT,
           },
-          relations: ['orderItems', 'orderItems.productVariant'],
+          relations: [
+            'orderItems',
+            'orderItems.productVariant',
+            'orderItems.digitalKey',
+          ],
         });
 
         if (!order) {
@@ -335,8 +341,13 @@ export class OrderService {
 
             // Release stock (Reversed)
             if (stock) {
-              stock.reserved = Math.max(0, stock.reserved - item.quantity); // item quantity in order (Not in stock)
+              stock.reserved = Math.max(0, stock.reserved - item.quantity);
               await manager.getRepository(Stock).save(stock);
+            }
+
+            // Collect digital keys to release after transaction
+            if (order.order_type === OrderType.DIGITAL && item.digitalKey) {
+              digitalKeysToRelease.push(item.digitalKey.id);
             }
           }
 
@@ -347,6 +358,25 @@ export class OrderService {
           console.log(`Order ${orderId} has been canceled due to expiration.`);
         }
       });
+
+      // Release digital keys AFTER main transaction completes successfully
+      for (const digitalKeyId of digitalKeysToRelease) {
+        try {
+          console.log('Releasing digital key:', digitalKeyId);
+
+          await this.dataSource.query(
+            `UPDATE digital_key SET "orderItemId" = NULL, status = 'UNUSED' WHERE id = $1`,
+            [digitalKeyId],
+          );
+
+          console.log('Digital key released successfully:', digitalKeyId);
+        } catch (keyError) {
+          console.error(
+            `Error releasing digital key ${digitalKeyId}:`,
+            keyError,
+          );
+        }
+      }
     } catch (error) {
       console.error(`Error canceling order ${orderId}:`, error);
     }

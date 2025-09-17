@@ -54,7 +54,7 @@ export class CartService {
     for (const item of items) {
       const variant = await this.productVariantRepository.findOne({
         where: { id: item.product_variant_id },
-        relations: ['images', 'product'],
+        relations: ['images', 'product', 'stock'],
       });
       if (variant) {
         item['name'] = variant.variant_name;
@@ -64,6 +64,7 @@ export class CartService {
         item['price'] = variant.price;
         item['discount'] = variant.discount;
         item['productStatus'] = variant.product.status;
+        item['maxStock'] = variant.stock.quantity - variant.stock.reserved;
 
         if (
           (cartType === CartType.PHYSICAL &&
