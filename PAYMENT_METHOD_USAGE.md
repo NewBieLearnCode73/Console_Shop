@@ -7,11 +7,12 @@
 ## Các thay đổi chính:
 
 ### 1. Order Entity
+
 ```typescript
 @Entity()
 export class Order extends AbstractEntity<Order> {
   // ... existing fields
-  
+
   @Column({ type: 'enum', enum: PaymentMethod })
   payment_method: PaymentMethod;
 
@@ -20,12 +21,13 @@ export class Order extends AbstractEntity<Order> {
 }
 ```
 
-### 2. Payment Entity  
+### 2. Payment Entity
+
 ```typescript
 @Entity()
 export class Payment extends AbstractEntity<Payment> {
   // ... existing fields
-  
+
   @OneToOne(() => Order, (order) => order.payment)
   @JoinColumn({ name: 'order_id' })
   order: Order;
@@ -33,15 +35,18 @@ export class Payment extends AbstractEntity<Payment> {
 ```
 
 ### 3. Database Migration
+
 - Đã tạo và chạy migration `AddPaymentMethodToOrder1758121840139`
 - Thêm `payment_method` column vào `order` table
 - Tạo proper foreign key relationship giữa `payment` và `order`
 - Update existing orders với default `COD` payment method
 
 ### 4. Order Service Updates
+
 Các method tạo order đã được update để set `payment_method`:
 
 #### Digital Product Buy Now (MoMo only)
+
 ```typescript
 const order = manager.getRepository(Order).create({
   // ... other fields
@@ -51,10 +56,11 @@ const order = manager.getRepository(Order).create({
 ```
 
 #### Physical Product Buy Now
+
 ```typescript
 // COD
 const order = manager.getRepository(Order).create({
-  // ... other fields  
+  // ... other fields
   payment_method: PaymentMethod.COD,
   // ... other fields
 });
@@ -68,6 +74,7 @@ const order = manager.getRepository(Order).create({
 ```
 
 #### Cart Checkout (Digital)
+
 ```typescript
 const order = manager.getRepository(Order).create({
   // ... other fields
@@ -77,30 +84,33 @@ const order = manager.getRepository(Order).create({
 ```
 
 #### Cart Checkout (Physical)
+
 ```typescript
 const order = manager.getRepository(Order).create({
   // ... other fields
   payment_method: paymentMethod, // COD hoặc MOMO_WALLET
-  // ... other fields  
+  // ... other fields
 });
 ```
 
 ## Cách sử dụng
 
 ### 1. Lấy payment method từ Order
+
 ```typescript
 // Direct access - không cần join
 const order = await this.orderRepository.findOne({
-  where: { id: orderId }
+  where: { id: orderId },
 });
 console.log('Payment method:', order.payment_method); // 'COD' hoặc 'MOMO_WALLET'
 ```
 
 ### 2. Lấy order với payment details
-```typescript  
+
+```typescript
 const order = await this.orderRepository.findOne({
   where: { id: orderId },
-  relations: ['payment'] // optional - chỉ khi cần payment details
+  relations: ['payment'], // optional - chỉ khi cần payment details
 });
 
 console.log('Payment method:', order.payment_method);
@@ -109,25 +119,28 @@ console.log('Transaction ID:', order.payment?.trans_id);
 ```
 
 ### 3. Query orders by payment method
+
 ```typescript
 const codOrders = await this.orderRepository.find({
-  where: { payment_method: PaymentMethod.COD }
+  where: { payment_method: PaymentMethod.COD },
 });
 
 const momoOrders = await this.orderRepository.find({
-  where: { payment_method: PaymentMethod.MOMO_WALLET }
+  where: { payment_method: PaymentMethod.MOMO_WALLET },
 });
 ```
 
 ## Flow hoạt động
 
 ### COD Orders:
+
 1. Tạo order với `payment_method: PaymentMethod.COD`
-2. Order có status `PENDING_CONFIRMATION` 
+2. Order có status `PENDING_CONFIRMATION`
 3. Khi ship order → tạo Payment record với status `PENDING` qua Kafka
 4. Khi giao hàng thành công → update Payment status thành `PAID`
 
 ### MoMo Orders:
+
 1. Tạo order với `payment_method: PaymentMethod.MOMO_WALLET`
 2. Order có status `PENDING_PAYMENT`
 3. Send Kafka event để tạo MoMo payment link
@@ -143,7 +156,7 @@ const momoOrders = await this.orderRepository.find({
 ## Test Cases
 
 1. ✅ Tạo digital product order (MoMo) - có `payment_method: 'MOMO_WALLET'`
-2. ✅ Tạo physical product order COD - có `payment_method: 'COD'`  
+2. ✅ Tạo physical product order COD - có `payment_method: 'COD'`
 3. ✅ Tạo physical product order MoMo - có `payment_method: 'MOMO_WALLET'`
 4. ✅ Cart checkout digital (MoMo) - có `payment_method: 'MOMO_WALLET'`
 5. ✅ Cart checkout physical (COD/MoMo) - có `payment_method` tương ứng

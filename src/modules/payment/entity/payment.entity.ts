@@ -2,7 +2,13 @@ import { AbstractEntity } from 'src/abstracts/abstract_entity';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
 import { PaymentStatus } from 'src/constants/payment_status.enum';
 import { Order } from 'src/modules/order/entity/order.entity';
-import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class Payment extends AbstractEntity<Payment> {
