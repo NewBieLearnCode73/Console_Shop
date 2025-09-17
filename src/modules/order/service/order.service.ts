@@ -53,6 +53,23 @@ export class OrderService {
     private readonly ghnService: GhnService,
     @InjectRedis() private readonly redis: Redis,
   ) {}
+
+  async getAllOrdersByUser(
+    userId: string,
+    paginationRequestDto: PaginationRequestDto,
+  ) {
+    const { page, limit, order, sortBy } = paginationRequestDto;
+
+    const [orders, total] = await this.orderRepository.findAndCount({
+      where: { user: { id: userId } },
+      order: { [sortBy]: order },
+      take: limit,
+      skip: (page - 1) * limit,
+    });
+
+    return PaginationResult(orders, total, page, limit);
+  }
+
   // Get digital keys for an order
   async getDigitalKeys(
     userId: string,

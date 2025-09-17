@@ -55,6 +55,18 @@ export class OrderController {
     );
   }
 
+  @Get()
+  @UseGuards(JwtCookieAuthGuard)
+  async getAllOrders(
+    @Req() req: AuthenticationRequest,
+    @Query() paginationRequestDto: PaginationRequestDto,
+  ) {
+    return await this.orderService.getAllOrdersByUser(
+      req.user.id,
+      paginationRequestDto,
+    );
+  }
+
   @Post('digital/buy-now')
   @UseGuards(JwtCookieAuthGuard)
   async digitalBuyNow(
