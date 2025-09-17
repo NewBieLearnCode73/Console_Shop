@@ -65,7 +65,11 @@ export class PaymentService {
 
     console.log('Check redis for existing payment link for order', orderId);
 
+    console.log('UserId:', userId);
+    console.log('OrderId:', orderId);
+    console.log('Redis key:', `MOMO:PAYMENT:${orderId}`);
     const cachedLink = await this.redis.get(`MOMO:PAYMENT:${orderId}`);
+    console.log('Cached link:', cachedLink);
 
     if (!cachedLink) {
       {

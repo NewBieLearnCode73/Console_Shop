@@ -1,7 +1,9 @@
 import { AbstractEntity } from 'src/abstracts/abstract_entity';
 import { OrderStatus } from 'src/constants/order_status.enum';
 import { OrderType } from 'src/constants/order_type.enum';
+import { PaymentMethod } from 'src/constants/payment_method.enum';
 import { User } from 'src/modules/user/entity/user.entity';
+import { Payment } from 'src/modules/payment/entity/payment.entity';
 import {
   Column,
   Entity,
@@ -43,6 +45,9 @@ export class Order extends AbstractEntity<Order> {
   @Column({ type: 'enum', enum: OrderType })
   order_type: OrderType;
 
+  @Column({ type: 'enum', enum: PaymentMethod })
+  payment_method: PaymentMethod;
+
   @Column({ nullable: true, type: 'timestamp' })
   expired_at: Date | null;
 
@@ -64,4 +69,7 @@ export class Order extends AbstractEntity<Order> {
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems: OrderItem[];
+
+  @OneToOne(() => Payment, (payment) => payment.order, { nullable: true })
+  payment: Payment | null;
 }
