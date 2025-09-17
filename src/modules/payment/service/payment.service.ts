@@ -13,7 +13,7 @@ import { MomoService } from 'src/modules/momo/service/momo.service';
 import { Order } from 'src/modules/order/entity/order.entity';
 import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
 import { Stock } from 'src/modules/product/entity/stock.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Payment } from '../entity/payment.entity';
 
 @Injectable()
@@ -31,6 +31,7 @@ export class PaymentService {
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     @InjectRedis() private readonly redis: Redis,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createMomoPayment(orderId: string, amount: number) {
@@ -155,6 +156,58 @@ export class PaymentService {
     console.log('Order updated to COMPLETED:', order);
   }
 
+  async handleMomoPaymentFailed(orderId: string) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId, status: OrderStatus.PENDING_PAYMENT },
+      relations: [
+        'orderItems',
+        'orderItems.productVariant',
+        'orderItems.digitalKey',
+      ],
+    });
+
+    if (!order) throw new BadRequestException('Order not found!');
+
+    order.status = OrderStatus.FAILED;
+    order.expired_at = null;
+
+    if (order.order_type === OrderType.DIGITAL) {
+      for (const item of order.orderItems) {
+        if (item.digitalKey) {
+          await this.dataSource.query(
+            `
+            UPDATE digital_key 
+            SET "orderItemId" = NULL, status = 'UNUSED'
+            WHERE id = $1
+          `,
+            [item.digitalKey.id],
+          );
+
+          console.log('Released digital key:', item.digitalKey.id);
+
+          const stock = await this.stockRepository.findOne({
+            where: { variant: { id: item.productVariant.id } },
+          });
+
+          if (!stock) {
+            throw new BadRequestException('Stock not found for variant');
+          }
+
+          stock.reserved = Math.max(0, stock.reserved - item.quantity);
+          await this.stockRepository.save(stock);
+        }
+      }
+    }
+
+    if (order.order_type === OrderType.PHYSICAL) {
+      for (const item of order.orderItems) {
+        const stock = await this.stockRepository.findOne({
+          where: { variant: { id: item.productVariant.id } },
+        });
+      }
+    }
+  }
+
   async createPaymentRecord(data: {
     orderId: string;
     amount: number;
@@ -164,6 +217,14 @@ export class PaymentService {
     paid_at: Date | null;
   }) {
     console.log('Creating payment record:', data);
+    const existedPayment = await this.paymentRepository.findOne({
+      where: { order_id: data.orderId },
+    });
+
+    if (existedPayment) {
+      console.log('Payment record already exists for order:', data.orderId);
+      return existedPayment;
+    }
 
     const payment = this.paymentRepository.create({
       method: data.method,

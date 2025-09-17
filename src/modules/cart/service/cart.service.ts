@@ -1,6 +1,6 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cart } from '../entity/cart.entity';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CartItem } from '../entity/cart_item.entity';
 import { User } from 'src/modules/user/entity/user.entity';
@@ -394,14 +394,75 @@ export class CartService {
         quantity: item.quantity,
       }));
 
-    await this.orderService.checkoutCartPhysicalProduct(
+    const savedOrder = await this.orderService.checkoutCartPhysicalProduct(
       userId,
       addressId,
       paymentMethod,
       orderCheckoutRequestDto,
     );
 
-    return physicalProducts;
+    await this.cleanPhysicalProductsInCart(userId);
+
+    return savedOrder;
+  }
+
+  async cleanPhysicalProductsInCart(userId: string) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items'],
+    });
+
+    if (!cart) {
+      throw new BadRequestException('Cart not found');
+    }
+
+    const itemsToRemove: any[] = [];
+
+    for (const item of cart.items) {
+      const variant = await this.productVariantRepository.findOne({
+        where: { id: item.product_variant_id },
+        relations: ['product'],
+      });
+
+      if (
+        variant?.product.product_type === ProductType.CARD_PHYSICAL ||
+        variant?.product.product_type === ProductType.DEVICE
+      ) {
+        itemsToRemove.push(item.id);
+      }
+    }
+
+    if (itemsToRemove.length > 0) {
+      await this.cartItemRepository.delete({ id: In(itemsToRemove) });
+    }
+    return { message: 'Physical products removed from cart successfully' };
+  }
+
+  async cleanDigitalProductsInCart(userId: string) {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items'],
+    });
+
+    if (!cart) {
+      throw new BadRequestException('Cart not found');
+    }
+
+    const itemsToRemove: any[] = [];
+
+    for (const item of cart.items) {
+      const variant = await this.productVariantRepository.findOne({
+        where: { id: item.product_variant_id },
+        relations: ['product'],
+      });
+      if (variant?.product.product_type === ProductType.CARD_DIGITAL_KEY) {
+        itemsToRemove.push(item.id);
+      }
+    }
+
+    if (itemsToRemove.length > 0) {
+      await this.cartItemRepository.delete({ id: In(itemsToRemove) });
+    }
   }
 
   async checkoutDigitalProductsInCart(userId: string) {
@@ -437,6 +498,8 @@ export class CartService {
       userId,
       orderCheckoutRequestDto,
     );
+
+    await this.cleanDigitalProductsInCart(userId);
 
     return savedOrder;
   }

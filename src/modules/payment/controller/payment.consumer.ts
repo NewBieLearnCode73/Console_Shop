@@ -23,6 +23,11 @@ export class PaymentConsumer {
     await this.paymentService.handleMomoPaymentSuccess(payload.orderId);
   }
 
+  @EventPattern('momo_payment_failed')
+  async handleMomoPaymentFailed(@Payload() payload: { orderId: string }) {
+    await this.paymentService.handleMomoPaymentFailed(payload.orderId);
+  }
+
   @EventPattern('create_payment_record')
   async createPaymentRecord(
     @Payload()

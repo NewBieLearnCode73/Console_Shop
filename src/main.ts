@@ -16,10 +16,7 @@ async function bootstrap() {
   app.useGlobalFilters(new CustomExceptionFilter());
   app.use(cookieParser());
   app.enableCors({
-    origin: [
-      'http://localhost:3001',
-      'https://abstract-settled-gmc-branches.trycloudflare.com',
-    ],
+    origin: ['http://localhost:3001'],
     credentials: true,
   });
 

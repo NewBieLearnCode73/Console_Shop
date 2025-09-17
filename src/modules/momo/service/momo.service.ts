@@ -198,6 +198,10 @@ export class MomoService {
     } else {
       console.log('Momo Payment Failed:', data);
 
+      this.kafkaService.sendEvent('momo_payment_failed', {
+        orderId: data.orderId,
+      });
+
       // Tạo Payment
       this.kafkaService.sendEvent('create_payment_record', {
         orderId: data.orderId,

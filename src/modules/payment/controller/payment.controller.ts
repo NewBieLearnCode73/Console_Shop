@@ -13,11 +13,18 @@ import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 
 @Controller('api/payments')
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) { }
+  constructor(private readonly paymentService: PaymentService) {}
+
+  @Post('momo/return-url')
+  returnUrlMomo(@Body() body: any) {
+    console.log('=== Return URL Controller Called ===');
+    return this.paymentService.handleMomoIPN(body);
+  }
 
   @Post('momo/ipn')
   handleMomoIPN(@Body() body: any) {
     console.log('=== IPN Controller Called ===');
+    console.log(body);
     return this.paymentService.handleMomoIPN(body);
   }
 
