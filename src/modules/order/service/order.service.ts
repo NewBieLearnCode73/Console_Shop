@@ -626,6 +626,8 @@ export class OrderService {
           orderId: result.id,
           amount: result.total_amount,
         });
+
+        return result;
       });
     } else {
       throw new BadRequestException('Invalid payment method!');
