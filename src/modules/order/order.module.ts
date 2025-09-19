@@ -14,8 +14,8 @@ import { KafkaService } from '../kafka/service/kafka.service';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 import { GiaohangnhanhModule } from '../giaohangnhanh/giaohangnhanh.module';
 import { Payment } from '../payment/entity/payment.entity';
-import { Cart } from '../cart/entity/cart.entity';
-import { CartModule } from '../cart/cart.module';
+import { RefundRequest } from '../refund/entity/refund_request.entity';
+import { Refund } from '../refund/entity/refund.entity';
 
 @Module({
   imports: [
@@ -28,6 +28,8 @@ import { CartModule } from '../cart/cart.module';
       Stock,
       Address,
       Payment,
+      RefundRequest,
+      Refund,
     ]),
     KafkaModule,
     GiaohangnhanhModule,

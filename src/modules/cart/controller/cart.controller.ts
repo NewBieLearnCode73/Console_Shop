@@ -41,7 +41,7 @@ export class CartController {
     );
   }
 
-  @Get('checkout-physical')
+  @Post('checkout-physical')
   @UseGuards(JwtCookieAuthGuard)
   async getCartForCheckoutPhysical(
     @Req() req: AuthenticationRequest,
@@ -54,7 +54,7 @@ export class CartController {
     );
   }
 
-  @Get('checkout-digital')
+  @Post('checkout-digital')
   @UseGuards(JwtCookieAuthGuard)
   async getCartForCheckoutDigital(@Req() req: AuthenticationRequest) {
     return this.cartService.checkoutDigitalProductsInCart(req.user.id);

@@ -15,6 +15,7 @@ import {
 } from 'typeorm';
 import { OrderAddress } from './order_address.entity';
 import { OrderItem } from './order_item.entity';
+import { RefundRequest } from 'src/modules/refund/entity/refund_request.entity';
 
 @Entity()
 export class Order extends AbstractEntity<Order> {
@@ -72,4 +73,11 @@ export class Order extends AbstractEntity<Order> {
 
   @OneToOne(() => Payment, (payment) => payment.order, { nullable: true })
   payment: Payment | null;
+
+  @OneToOne(() => RefundRequest, (refundRequest) => refundRequest.order, {
+    cascade: true,
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
+  refundRequest: RefundRequest | null;
 }

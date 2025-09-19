@@ -16,6 +16,7 @@ export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Post('momo/return-url')
+  @UseGuards(JwtCookieAuthGuard)
   returnUrlMomo(@Body() body: any) {
     console.log('=== Return URL Controller Called ===');
     return this.paymentService.handleMomoIPN(body);
@@ -29,6 +30,7 @@ export class PaymentController {
   }
 
   @Get('momo/status')
+  @UseGuards(JwtCookieAuthGuard)
   getMomoPaymentStatus(@Query('orderId') orderId: string) {
     return this.paymentService.getMomoPaymentStatus(orderId);
   }

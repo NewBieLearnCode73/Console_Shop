@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import {
   OrderDigitalBuyNowRequestDto,
   OrderPhysicalBuyNowRequestDto,
@@ -30,6 +34,7 @@ import { OrderShippingResponseDto } from '../dto/response/order-response.dto';
 import { GhnService } from 'src/modules/giaohangnhanh/service/ghn.service';
 import { PaymentStatus } from 'src/constants/payment_status.enum';
 import { OrderCheckoutCartRequestDto } from '../dto/request/order-request.dto';
+import { RefundRequest } from 'src/modules/refund/entity/refund_request.entity';
 
 @Injectable()
 export class OrderService {
@@ -48,6 +53,8 @@ export class OrderService {
     private readonly addressRepository: Repository<Address>,
     @InjectRepository(Stock)
     private readonly stockRepository: Repository<Stock>,
+    @InjectRepository(RefundRequest)
+    private readonly refundRequestRepository: Repository<RefundRequest>,
     private readonly kafkaService: KafkaService,
     private readonly dataSource: DataSource,
     private readonly ghnService: GhnService,
@@ -65,6 +72,7 @@ export class OrderService {
       order: { [sortBy]: order },
       take: limit,
       skip: (page - 1) * limit,
+      relations: ['refundRequest'],
     });
 
     return PaginationResult(orders, total, page, limit);
@@ -889,7 +897,12 @@ export class OrderService {
   async getOrderByIdForUser(userId: string, orderId: string) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId, user: { id: userId } },
-      relations: ['orderItems', 'orderItems.productVariant', 'orderAddress'],
+      relations: [
+        'orderItems',
+        'orderItems.productVariant',
+        'orderAddress',
+        'refundRequest',
+      ],
     });
 
     if (!order)
@@ -961,10 +974,30 @@ export class OrderService {
     if (!order)
       throw new BadRequestException('Order not found or not your order!');
 
+    if (order.payment_method === PaymentMethod.MOMO_WALLET) {
+      if (
+        [OrderStatus.PAID, OrderStatus.CONFIRMED, OrderStatus.SHIPPED].includes(
+          order.status,
+        )
+      ) {
+        throw new BadRequestException(
+          'Cannot cancel order with online payment. Please use the refund process.',
+        );
+      }
+    } else if (order.payment_method === PaymentMethod.COD) {
+      if (
+        order.status === OrderStatus.CONFIRMED ||
+        order.status === OrderStatus.SHIPPED
+      ) {
+        throw new BadRequestException(
+          'Cannot cancel order that has been confirmed or shipped. Please contact support.',
+        );
+      }
+    }
+
     if (
-      !(
-        order.status === OrderStatus.PENDING_CONFIRMATION ||
-        order.status === OrderStatus.PENDING_PAYMENT
+      ![OrderStatus.PENDING_CONFIRMATION, OrderStatus.PENDING_PAYMENT].includes(
+        order.status,
       )
     ) {
       throw new BadRequestException(
@@ -1009,6 +1042,7 @@ export class OrderService {
       take: limit,
       skip: (page - 1) * limit,
       order: { [sortBy]: order },
+      relations: ['refundRequest'],
     });
 
     return PaginationResult(result, total, page, limit);
@@ -1025,6 +1059,7 @@ export class OrderService {
       take: limit,
       skip: (page - 1) * limit,
       order: { [sortBy]: order },
+      relations: ['refundRequest'],
     });
 
     return PaginationResult(result, total, page, limit);
@@ -1033,7 +1068,12 @@ export class OrderService {
   async getOrderById(orderId: string) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['orderItems', 'orderItems.productVariant', 'orderAddress'],
+      relations: [
+        'orderItems',
+        'orderItems.productVariant',
+        'orderAddress',
+        'refundRequest',
+      ],
     });
     if (!order) throw new BadRequestException('Order not found!');
     return order;
@@ -1046,7 +1086,7 @@ export class OrderService {
         status: In([OrderStatus.PENDING_CONFIRMATION, OrderStatus.PAID]),
         order_type: OrderType.PHYSICAL,
       },
-      relations: ['orderItems', 'orderItems.productVariant'],
+      relations: ['orderItems', 'orderItems.productVariant', 'refundRequest'],
     });
 
     console.log('Order to confirm:', order);
@@ -1054,6 +1094,11 @@ export class OrderService {
     if (!order)
       throw new BadRequestException(
         'Order not found or not in PENDING_CONFIRMATION/PAID status!',
+      );
+
+    if (order.refundRequest)
+      throw new ConflictException(
+        'Cannot confirm order with an associated refund request!',
       );
 
     order.status = OrderStatus.CONFIRMED;
@@ -1073,6 +1118,7 @@ export class OrderService {
         'orderItems',
         'orderItems.productVariant',
         'orderItems.productVariant.product',
+        'refundRequest',
       ],
     });
 
@@ -1083,7 +1129,10 @@ export class OrderService {
 
     console.log('Order to ship:', order);
 
-    // Trả về đơn hàng
+    if (order.refundRequest)
+      throw new ConflictException(
+        'Cannot ship order with an associated refund request!',
+      );
 
     const responseOrder: OrderShippingResponseDto = {
       orderId: order.id,
@@ -1153,7 +1202,52 @@ export class OrderService {
     return result;
   }
 
-  async cancelOrder(orderId: string) {}
+  async cancelOrder(orderId: string) {
+    const order = await this.orderRepository.findOne({
+      where: {
+        id: orderId,
+        status: In([
+          OrderStatus.PENDING_CONFIRMATION,
+          OrderStatus.PENDING_PAYMENT,
+        ]),
+        order_type: OrderType.PHYSICAL,
+      },
+      relations: ['orderItems', 'orderItems.productVariant'],
+    });
+
+    if (!order)
+      throw new BadRequestException(
+        'Order not found or not in PENDING_CONFIRMATION or PENDING_PAYMENT status!',
+      );
+
+    try {
+      if (!order.order_code) {
+        throw new BadRequestException('Order code not found for this order!');
+      }
+
+      await this.dataSource.transaction(async (manager) => {
+        for (const item of order.orderItems) {
+          const stock = await manager.findOne(Stock, {
+            where: { variant: { id: item.productVariant.id } },
+          });
+
+          if (!stock)
+            throw new BadRequestException('Stock information not found!');
+
+          console.log('Stock before canceling:', stock);
+
+          stock.reserved = Math.max(0, stock.reserved - item.quantity);
+          stock.quantity = Math.max(0, stock.quantity - item.quantity);
+
+          console.log('Stock after canceling:', stock);
+
+          await manager.save(stock);
+        }
+      });
+    } catch (error) {
+      console.error(`Error canceling order ${orderId}:`, error);
+    }
+  }
 
   async deliverdOrder(orderId: string) {}
 

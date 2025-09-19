@@ -122,15 +122,15 @@ export class OrderController {
   // **********************FOR ADMIN AND MANAGER - START******************************* */
 
   @Get('/admin-manager/find-all')
-  // @UseGuards(JwtCookieAuthGuard)
-  // @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async getOrderStatus(@Query() paginationRequestDto: PaginationRequestDto) {
     return await this.orderService.getAllOrders(paginationRequestDto);
   }
 
   @Get('/admin-manager/find-by-status/:status')
-  // @UseGuards(JwtCookieAuthGuard)
-  // @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async getOrdersByStatus(
     @Param() status: OrderStatusRequestDto,
     @Query() paginationRequestDto: PaginationRequestDto,
@@ -142,22 +142,22 @@ export class OrderController {
   }
 
   @Get('/admin-manager/:orderId')
-  // @UseGuards(JwtCookieAuthGuard)
-  // @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async getOrderById(@Param() orderId: OrderIdRequestDto) {
     return await this.orderService.getOrderById(orderId.orderId);
   }
 
   @Get('/admin-manager/confrim-order/:orderId')
-  // @UseGuards(JwtCookieAuthGuard)
-  // @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async confrimOrder(@Param() orderId: OrderIdRequestDto) {
     return await this.orderService.confrimOrder(orderId.orderId);
   }
 
   @Get('/admin-manager/ship-order/:orderId')
-  // @UseGuards(JwtCookieAuthGuard)
-  // @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async shipOrder(@Param() orderId: OrderIdRequestDto) {
     return await this.orderService.shipOrder(orderId.orderId);
   }
@@ -169,20 +169,26 @@ export class OrderController {
     return await this.orderService.cancelOrder(orderId.orderId);
   }
 
+  @Put('/admin-manager/cancel/:orderId')
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  async cancelShippedOrderByAdmin(@Param() orderId: OrderIdRequestDto) {
+    return await this.orderService.cancelOrder(orderId.orderId);
+  }
+
   // **********************FOR ADMIN AND MANAGER - END******************************* */
 
   // **********************FOR ADMIN - START******************************* */
-
   @Get('/admin/deliverd-order/:orderId')
-  // @UseGuards(JwtCookieAuthGuard)
-  // @RolesDecorator([Role.ADMIN])
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN])
   async deliverdOrder(@Param() orderId: OrderIdRequestDto) {
     return await this.orderService.deliverdOrder(orderId.orderId);
   }
 
   @Get('/admin/return-order/:orderId')
-  // @UseGuards(JwtCookieAuthGuard)
-  // @RolesDecorator([Role.ADMIN])
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN])
   async returnOrder(@Param() orderId: OrderIdRequestDto) {
     return await this.orderService.returnOrder(orderId.orderId);
   }
