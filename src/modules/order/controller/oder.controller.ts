@@ -162,13 +162,6 @@ export class OrderController {
     return await this.orderService.shipOrder(orderId.orderId);
   }
 
-  @Get('/admin-managercancel-order/:orderId')
-  @UseGuards(JwtCookieAuthGuard)
-  @RolesDecorator([Role.ADMIN, Role.MANAGER])
-  async cancelOrderByAdmin(@Param() orderId: OrderIdRequestDto) {
-    return await this.orderService.cancelOrder(orderId.orderId);
-  }
-
   @Put('/admin-manager/cancel/:orderId')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.ADMIN, Role.MANAGER])

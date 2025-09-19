@@ -33,6 +33,29 @@ export class RefundService {
   ) {}
 
   // ***************************** CUSTOMER *********************************//
+  async getRefundRequestByOrderId(userId: string, orderId: string) {
+    const order = await this.orderRepository.findOne({
+      where: {
+        id: orderId,
+        user: { id: userId },
+        order_type: OrderType.PHYSICAL,
+      },
+      relations: ['refundRequest'],
+    });
+
+    if (!order) {
+      throw new BadRequestException(
+        'Order not found or does not belong to user',
+      );
+    }
+
+    if (!order.refundRequest) {
+      throw new BadRequestException('No refund request found for this order');
+    }
+
+    return order.refundRequest;
+  }
+
   async createRefundRequest(userId: string, orderId: string, reason: string) {
     const order = await this.orderRepository.findOne({
       where: {
@@ -84,7 +107,10 @@ export class RefundService {
       reason,
     });
 
-    return await this.refundRequestRepository.save(refundRequest);
+    const savedRefundRequest =
+      await this.refundRequestRepository.save(refundRequest);
+
+    return savedRefundRequest;
   }
 
   async findAllRefundRequestByUser(

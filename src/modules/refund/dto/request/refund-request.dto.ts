@@ -1,6 +1,12 @@
 import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
 import { RefundStatus } from 'src/constants/refund_status.enum';
 
+export class FindRefundRequestsByOrderId {
+  @IsNotEmpty()
+  @IsUUID()
+  orderId: string;
+}
+
 export class RefundRequestDto {
   @IsNotEmpty()
   @IsUUID()

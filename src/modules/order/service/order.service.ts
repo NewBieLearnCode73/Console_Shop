@@ -1208,44 +1208,69 @@ export class OrderService {
         id: orderId,
         status: In([
           OrderStatus.PENDING_CONFIRMATION,
-          OrderStatus.PENDING_PAYMENT,
+          OrderStatus.CONFIRMED,
+          OrderStatus.SHIPPED,
         ]),
         order_type: OrderType.PHYSICAL,
+        payment_method: PaymentMethod.COD,
       },
       relations: ['orderItems', 'orderItems.productVariant'],
     });
 
-    if (!order)
+    if (!order) {
       throw new BadRequestException(
-        'Order not found or not in PENDING_CONFIRMATION or PENDING_PAYMENT status!',
+        'Order not found or not cancellable with COD!',
       );
+    }
 
     try {
-      if (!order.order_code) {
-        throw new BadRequestException('Order code not found for this order!');
-      }
-
       await this.dataSource.transaction(async (manager) => {
+        // Nếu trạng thái là SHIPPED → gọi GHN hủy
+        if (order.status === OrderStatus.SHIPPED) {
+          if (!order.order_code) {
+            throw new BadRequestException(
+              'Order code not found for this order!',
+            );
+          }
+
+          const cancelResult: any = await this.ghnService.cancelOrder(
+            order.order_code,
+          );
+        }
+
+        // Xử lý tồn kho
         for (const item of order.orderItems) {
           const stock = await manager.findOne(Stock, {
             where: { variant: { id: item.productVariant.id } },
           });
 
-          if (!stock)
+          if (!stock) {
             throw new BadRequestException('Stock information not found!');
+          }
 
-          console.log('Stock before canceling:', stock);
+          switch (order.status) {
+            case OrderStatus.PENDING_CONFIRMATION:
+            case OrderStatus.CONFIRMED:
+              // Giảm reserved
+              stock.reserved = Math.max(0, stock.reserved - item.quantity);
+              break;
 
-          stock.reserved = Math.max(0, stock.reserved - item.quantity);
-          stock.quantity = Math.max(0, stock.quantity - item.quantity);
-
-          console.log('Stock after canceling:', stock);
+            case OrderStatus.SHIPPED:
+              // Nếu hủy được bên GHN → cộng lại quantity
+              stock.quantity += item.quantity;
+              break;
+          }
 
           await manager.save(stock);
         }
+
+        // Cập nhật trạng thái đơn
+        order.status = OrderStatus.CANCELED;
+        await manager.save(order);
       });
     } catch (error) {
       console.error(`Error canceling order ${orderId}:`, error);
+      throw error;
     }
   }
 

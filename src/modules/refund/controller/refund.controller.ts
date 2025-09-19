@@ -1,9 +1,19 @@
-import { Body, Controller, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from 'src/constants/role.enum';
 import { RolesDecorator } from 'src/decorators/role_decorator';
 import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
+  FindRefundRequestsByOrderId,
   RefundRequestDto,
   ReviewedRefundRequestDto,
 } from '../dto/request/refund-request.dto';
@@ -15,6 +25,19 @@ export class RefundController {
   constructor(private readonly refundService: RefundService) {}
 
   // ********************** For Customer **********************//
+  @Get('/order/:orderId')
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.CUSTOMER])
+  async getRefundRequestByOrderId(
+    @Req() req: AuthenticationRequest,
+    @Param() findRefundRequestsByOrderId: FindRefundRequestsByOrderId,
+  ) {
+    return await this.refundService.getRefundRequestByOrderId(
+      req.user.id,
+      findRefundRequestsByOrderId.orderId,
+    );
+  }
+
   @Post('/request')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.CUSTOMER])
