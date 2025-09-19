@@ -40,11 +40,18 @@ export class RefundService {
         user: { id: userId },
         order_type: OrderType.PHYSICAL,
       },
+      relations: ['refundRequest'],
     });
 
     if (!order) {
       throw new BadRequestException(
         'Order not found or does not belong to user',
+      );
+    }
+
+    if (order.refundRequest) {
+      throw new BadRequestException(
+        'Refund request for this order already exists',
       );
     }
 
