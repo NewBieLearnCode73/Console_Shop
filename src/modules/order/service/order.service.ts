@@ -35,6 +35,7 @@ import { GhnService } from 'src/modules/giaohangnhanh/service/ghn.service';
 import { PaymentStatus } from 'src/constants/payment_status.enum';
 import { OrderCheckoutCartRequestDto } from '../dto/request/order-request.dto';
 import { RefundRequest } from 'src/modules/refund/entity/refund_request.entity';
+import { RefundStatus } from 'src/constants/refund_status.enum';
 
 @Injectable()
 export class OrderService {
@@ -1096,7 +1097,10 @@ export class OrderService {
         'Order not found or not in PENDING_CONFIRMATION/PAID status!',
       );
 
-    if (order.refundRequest)
+    if (
+      order.refundRequest &&
+      order.refundRequest.status !== RefundStatus.REJECTED
+    )
       throw new ConflictException(
         'Cannot confirm order with an associated refund request!',
       );
@@ -1129,7 +1133,10 @@ export class OrderService {
 
     console.log('Order to ship:', order);
 
-    if (order.refundRequest)
+    if (
+      order.refundRequest &&
+      order.refundRequest.status !== RefundStatus.REJECTED
+    )
       throw new ConflictException(
         'Cannot ship order with an associated refund request!',
       );
@@ -1274,7 +1281,56 @@ export class OrderService {
     }
   }
 
-  async deliverdOrder(orderId: string) {}
+  async deliverdOrder(orderId: string) {
+    if (!orderId) throw new BadRequestException('Order ID is required');
 
-  async returnOrder(orderId: string) {}
+    const order = await this.orderRepository.findOne({
+      where: {
+        id: orderId,
+        status: OrderStatus.SHIPPED,
+        order_type: OrderType.PHYSICAL,
+      },
+      relations: ['orderItems', 'orderItems.productVariant', 'user'],
+    });
+
+    if (!order)
+      throw new BadRequestException(
+        'Order not found or not in SHIPPED status!',
+      );
+    order.status = OrderStatus.DELIVERED;
+    const result = await this.orderRepository.save(order);
+
+    return result;
+  }
+
+  async completeOrder(orderId: string) {
+    if (!orderId) throw new BadRequestException('Order ID is required');
+
+    const order = await this.orderRepository.findOne({
+      where: {
+        id: orderId,
+        status: OrderStatus.DELIVERED,
+        order_type: OrderType.PHYSICAL,
+      },
+      relations: ['orderItems', 'orderItems.productVariant', 'user', 'payment'],
+    });
+
+    if (!order)
+      throw new BadRequestException(
+        'Order not found or not in DELIVERED status!',
+      );
+
+    order.status = OrderStatus.COMPLETED;
+    order.completed_at = new Date();
+
+    // Tạo payment record
+    this.kafkaService.sendEvent('update_payment_status', {
+      orderId: order.id,
+      status: PaymentStatus.SUCCESS,
+    });
+
+    const result = await this.orderRepository.save(order);
+
+    return result;
+  }
 }

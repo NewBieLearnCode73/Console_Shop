@@ -172,18 +172,25 @@ export class OrderController {
   // **********************FOR ADMIN AND MANAGER - END******************************* */
 
   // **********************FOR ADMIN - START******************************* */
-  @Get('/admin/deliverd-order/:orderId')
+  @Patch('/admin/deliverd-order/:orderId')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.ADMIN])
   async deliverdOrder(@Param() orderId: OrderIdRequestDto) {
     return await this.orderService.deliverdOrder(orderId.orderId);
   }
 
-  @Get('/admin/return-order/:orderId')
+  @Patch('/admin/completed-order/:orderId')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.ADMIN])
-  async returnOrder(@Param() orderId: OrderIdRequestDto) {
-    return await this.orderService.returnOrder(orderId.orderId);
+  async completedOrder(@Param() orderId: OrderIdRequestDto) {
+    return await this.orderService.completeOrder(orderId.orderId);
   }
+
+  // @Get('/admin/return-order/:orderId')
+  // @UseGuards(JwtCookieAuthGuard)
+  // @RolesDecorator([Role.ADMIN])
+  // async returnOrder(@Param() orderId: OrderIdRequestDto) {
+  //   return await this.orderService.returnOrder(orderId.orderId);
+  // }
   // **********************FOR ADMIN - END******************************* */
 }

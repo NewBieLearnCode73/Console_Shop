@@ -243,4 +243,20 @@ export class PaymentService {
     console.log('Payment record created:', payment);
     return payment;
   }
+
+  async updatePaymentStatus(orderId: string, status: PaymentStatus) {
+    const payment = await this.paymentRepository.findOne({
+      where: { order_id: orderId },
+    });
+
+    if (!payment) {
+      throw new BadRequestException('Payment record not found for order');
+    }
+
+    payment.status = status;
+
+    const updatedPayment = await this.paymentRepository.save(payment);
+    console.log('Payment status updated:', updatedPayment);
+    return updatedPayment;
+  }
 }

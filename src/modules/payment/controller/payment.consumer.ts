@@ -42,4 +42,14 @@ export class PaymentConsumer {
   ) {
     await this.paymentService.createPaymentRecord(payload);
   }
+
+  @EventPattern('update_payment_status')
+  async updatePaymentStatus(
+    @Payload() payload: { orderId: string; status: PaymentStatus },
+  ) {
+    await this.paymentService.updatePaymentStatus(
+      payload.orderId,
+      payload.status,
+    );
+  }
 }
