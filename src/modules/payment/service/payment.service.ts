@@ -153,11 +153,14 @@ export class PaymentService {
         if (!stock) {
           throw new BadRequestException('Stock not found for variant');
         }
-      }
-    }
 
-    await this.orderRepository.save(order);
-    console.log('Order updated to COMPLETED:', order);
+        stock.reserved = Math.max(0, stock.reserved - item.quantity);
+        await this.stockRepository.save(stock);
+        console.log('Released stock for variant:', item.productVariant.id);
+      }
+      await this.orderRepository.save(order);
+      console.log('Order updated to COMPLETED:', order);
+    }
   }
 
   async handleMomoPaymentFailed(orderId: string) {

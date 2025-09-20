@@ -208,7 +208,7 @@ export class MomoService {
         orderId: data.orderId,
         amount: data.amount,
         method: PaymentMethod.MOMO_WALLET,
-        Trans_id: data.transId,
+        trans_id: data.transId,
         status: PaymentStatus.FAILED,
         paid_at: new Date(),
       });
