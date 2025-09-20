@@ -142,7 +142,7 @@ export class PaymentService {
       }
 
       await this.orderRepository.save(order);
-      console.log('Order updated to COMPLETED:', order);
+      console.log('Order updated to PAID:', order);
     }
 
     if (order.order_type === OrderType.PHYSICAL) {
@@ -162,7 +162,7 @@ export class PaymentService {
         console.log('Released stock for variant:', item.productVariant.id);
       }
       await this.orderRepository.save(order);
-      console.log('Order updated to COMPLETED:', order);
+      console.log('Order updated to PAID:', order);
     }
   }
 
