@@ -764,6 +764,7 @@ export class OrderService {
           order_type: orderProp.order_type,
           orderItems: orderProp.orderItems,
           total_amount: orderProp.total_amount,
+          payment_method: PaymentMethod.COD,
           orderAddress: savedOrderAddress,
           shipping_fee: shipping_fee.service_fee,
           user,
@@ -1080,7 +1081,7 @@ export class OrderService {
     return order;
   }
 
-  async confrimOrder(orderId: string) {
+  async confirmOrder(orderId: string) {
     const order = await this.orderRepository.findOne({
       where: {
         id: orderId,

@@ -3,8 +3,10 @@ import {
   Controller,
   Get,
   Param,
+  ParseEnumPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -19,12 +21,27 @@ import {
 } from '../dto/request/refund-request.dto';
 import { RefundService } from '../service/refund.service';
 import { FinalizedRefundRequestDto } from '../dto/request/refund-request.dto';
+import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
+import { RefundStatus } from 'src/constants/refund_status.enum';
 
 @Controller('api/refunds')
 export class RefundController {
   constructor(private readonly refundService: RefundService) {}
 
   // ********************** For Customer **********************//
+  @Get()
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.CUSTOMER])
+  async getAllRefundRequests(
+    @Req() req: AuthenticationRequest,
+    @Query() paginationRequestDto: PaginationRequestDto,
+  ) {
+    return await this.refundService.findAllRefundRequestByUser(
+      req.user.id,
+      paginationRequestDto,
+    );
+  }
+
   @Get('/order/:orderId')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.CUSTOMER])
@@ -53,6 +70,20 @@ export class RefundController {
   }
 
   // ********************** For Manager and ADMIN ********************** //
+
+  @Get('/admin-manager')
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.MANAGER, Role.ADMIN])
+  async getAllRefundRequestsForAdminManager(
+    @Query() paginationRequestDto: PaginationRequestDto,
+    @Query('status', new ParseEnumPipe(RefundStatus)) status: RefundStatus,
+  ) {
+    return await this.refundService.findAllRefundRequests(
+      paginationRequestDto,
+      status,
+    );
+  }
+
   @Patch('/admin-manager/reviewed')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.MANAGER, Role.ADMIN])

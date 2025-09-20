@@ -130,6 +130,24 @@ export class RefundService {
   }
 
   // ***************************** ADMIN & MANAGER *********************************//
+
+  async findAllRefundRequests(
+    pagination: PaginationRequestDto,
+    status?: RefundStatus,
+  ) {
+    const { page, limit, order, sortBy } = pagination;
+    const whereCondition = status ? { status: In([status]) } : {};
+    const [refunds, total] = await this.refundRequestRepository.findAndCount({
+      where: whereCondition,
+      order: { [sortBy]: order },
+      take: limit,
+      skip: (page - 1) * limit,
+      relations: ['user', 'order', 'reviewedBy', 'finalizedBy'],
+    });
+
+    return PaginationResult(refunds, total, page, limit);
+  }
+
   async reviewRefundRequest(
     refundRequestId: string,
     status: RefundStatus,

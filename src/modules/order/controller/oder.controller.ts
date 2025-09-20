@@ -29,7 +29,8 @@ import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
-  //**********************FOR CUSTOMER - START******************************* */
+  //**********************FOR CUSTOMER - START********************************/
+
   @Get('/digital_keys')
   @UseGuards(JwtCookieAuthGuard)
   async getDigitalKeys(
@@ -148,21 +149,21 @@ export class OrderController {
     return await this.orderService.getOrderById(orderId.orderId);
   }
 
-  @Get('/admin-manager/confrim-order/:orderId')
+  @Patch('/admin-manager/confirm-order/:orderId')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async confrimOrder(@Param() orderId: OrderIdRequestDto) {
-    return await this.orderService.confrimOrder(orderId.orderId);
+    return await this.orderService.confirmOrder(orderId.orderId);
   }
 
-  @Get('/admin-manager/ship-order/:orderId')
+  @Patch('/admin-manager/ship-order/:orderId')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async shipOrder(@Param() orderId: OrderIdRequestDto) {
     return await this.orderService.shipOrder(orderId.orderId);
   }
 
-  @Put('/admin-manager/cancel/:orderId')
+  @Patch('/admin-manager/cancel/:orderId')
   @UseGuards(JwtCookieAuthGuard)
   @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async cancelShippedOrderByAdmin(@Param() orderId: OrderIdRequestDto) {

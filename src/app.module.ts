@@ -14,6 +14,7 @@ import { KafkaModule } from './modules/kafka/kafka.module';
 import { MomoModule } from './modules/momo/momo.module';
 import { GiaohangnhanhModule } from './modules/giaohangnhanh/giaohangnhanh.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ReportModule } from './modules/report/report.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     KafkaModule,
     MomoModule,
     GiaohangnhanhModule,
+    ReportModule,
   ],
   controllers: [],
   providers: [],
