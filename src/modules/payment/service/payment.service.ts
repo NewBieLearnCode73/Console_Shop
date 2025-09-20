@@ -138,8 +138,11 @@ export class PaymentService {
 
         stock.reserved = Math.max(0, stock.reserved - item.quantity);
         stock.quantity = Math.max(0, stock.quantity - item.quantity);
-        await this.stockRepository.save(stock);
+        const result = await this.stockRepository.save(stock);
       }
+
+      await this.orderRepository.save(order);
+      console.log('Order updated to COMPLETED:', order);
     }
 
     if (order.order_type === OrderType.PHYSICAL) {
