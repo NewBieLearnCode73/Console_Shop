@@ -208,6 +208,15 @@ export class PaymentService {
         const stock = await this.stockRepository.findOne({
           where: { variant: { id: item.productVariant.id } },
         });
+
+        if (!stock) {
+          throw new BadRequestException('Stock not found for variant');
+        }
+
+        stock.reserved = Math.max(0, stock.reserved - item.quantity);
+        await this.stockRepository.save(stock);
+
+        console.log('Released stock for variant:', item.productVariant.id);
       }
     }
 
