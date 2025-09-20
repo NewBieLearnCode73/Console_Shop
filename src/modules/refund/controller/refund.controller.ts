@@ -16,6 +16,7 @@ import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 import { AuthenticationRequest } from 'src/interfaces/authentication_request';
 import {
   FindRefundRequestsByOrderId,
+  GetAllRefundRequestsForAdminManager,
   RefundRequestDto,
   ReviewedRefundRequestDto,
 } from '../dto/request/refund-request.dto';
@@ -76,11 +77,12 @@ export class RefundController {
   @RolesDecorator([Role.MANAGER, Role.ADMIN])
   async getAllRefundRequestsForAdminManager(
     @Query() paginationRequestDto: PaginationRequestDto,
-    @Query('status', new ParseEnumPipe(RefundStatus)) status: RefundStatus,
+    @Query()
+    getAllRefundRequestsForAdminManager: GetAllRefundRequestsForAdminManager,
   ) {
     return await this.refundService.findAllRefundRequests(
       paginationRequestDto,
-      status,
+      getAllRefundRequestsForAdminManager.status,
     );
   }
 

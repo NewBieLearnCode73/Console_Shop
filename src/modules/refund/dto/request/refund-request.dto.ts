@@ -1,4 +1,10 @@
-import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { RefundStatus } from 'src/constants/refund_status.enum';
 
 export class FindRefundRequestsByOrderId {
@@ -36,4 +42,10 @@ export class FinalizedRefundRequestDto {
 
   @IsNotEmpty()
   amount: number;
+}
+
+export class GetAllRefundRequestsForAdminManager {
+  @IsOptional()
+  @IsEnum(RefundStatus)
+  status?: RefundStatus;
 }

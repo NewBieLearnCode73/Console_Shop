@@ -93,6 +93,7 @@ export class RefundService {
           OrderStatus.SHIPPED,
           OrderStatus.CONFIRMED,
           OrderStatus.PAID,
+          OrderStatus.COMPLETED,
         ].includes(order.status)
       ) {
         throw new BadRequestException(
@@ -124,6 +125,7 @@ export class RefundService {
       order: { [sortBy]: order },
       take: limit,
       skip: (page - 1) * limit,
+      relations: ['order'],
     });
 
     return PaginationResult(refunds, total, page, limit);
@@ -142,7 +144,7 @@ export class RefundService {
       order: { [sortBy]: order },
       take: limit,
       skip: (page - 1) * limit,
-      relations: ['user', 'order', 'reviewedBy', 'finalizedBy'],
+      relations: ['order', 'reviewedBy', 'finalizedBy'],
     });
 
     return PaginationResult(refunds, total, page, limit);
