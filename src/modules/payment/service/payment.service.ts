@@ -210,6 +210,9 @@ export class PaymentService {
         });
       }
     }
+
+    const result = await this.orderRepository.save(order);
+    console.log('Order updated to FAILED:', result);
   }
 
   async createPaymentRecord(data: {

@@ -11,6 +11,7 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import { KafkaService } from 'src/modules/kafka/service/kafka.service';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
 import { PaymentStatus } from 'src/constants/payment_status.enum';
+import { th } from '@faker-js/faker';
 
 @Injectable()
 export class MomoService {
@@ -212,7 +213,9 @@ export class MomoService {
         paid_at: new Date(),
       });
 
-      return 'THẤT BẠI!';
+      throw new BadRequestException(
+        'Payment failed with resultCode ' + data.resultCode,
+      );
     }
   }
 
