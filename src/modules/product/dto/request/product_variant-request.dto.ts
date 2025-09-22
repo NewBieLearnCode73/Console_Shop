@@ -52,7 +52,7 @@ export class CreateProductVariantDto {
 
 // DTO for Physical variants (DEVICE, CARD_PHYSICAL)
 export class CreatePhysicalVariantDto extends CreateProductVariantDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   color?: string;
 

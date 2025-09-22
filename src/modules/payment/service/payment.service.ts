@@ -1,5 +1,5 @@
 import { InjectRedis } from '@nestjs-modules/ioredis';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Redis } from 'ioredis';
@@ -18,6 +18,7 @@ import { Payment } from '../entity/payment.entity';
 
 @Injectable()
 export class PaymentService {
+  private readonly logger = new Logger(PaymentService.name);
   constructor(
     private readonly configService: ConfigService,
     private readonly momoService: MomoService,
@@ -99,70 +100,99 @@ export class PaymentService {
     // Nếu là digital -> Cập nhật digital key thành USED và active_at
     // Vào stock và trừ reserved_stock đi 1 và trừ stock đi 1
 
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId, status: OrderStatus.PENDING_PAYMENT },
-      relations: [
-        'orderItems',
-        'orderItems.productVariant',
-        'orderItems.digitalKey',
-      ],
-    });
+    try {
+      this.logger.log(
+        `Starting momo payment success process for order: ${orderId}`,
+      );
 
-    if (!order) throw new BadRequestException('Order not found!');
-    order.expired_at = null;
-    order.completed_at = new Date();
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId, status: OrderStatus.PENDING_PAYMENT },
+        relations: [
+          'orderItems',
+          'orderItems.productVariant',
+          'orderItems.digitalKey',
+        ],
+      });
 
-    // If digital order, update digital key status to USED and active_at
-    if (order.order_type === OrderType.DIGITAL) {
-      order.status = OrderStatus.COMPLETED;
+      if (!order) {
+        this.logger.warn(
+          `Order not found for momo payment success: ${orderId}. Order may have been already processed or cancelled.`,
+        );
+        // Return early instead of throwing to avoid infinite retries
+        return;
+      }
 
-      for (const item of order.orderItems) {
-        if (item.digitalKey) {
-          const digitalKey = await this.digitalKeyRepository.findOne({
-            where: { id: item.digitalKey.id, status: KeyStatus.UNUSED },
-          });
-          if (digitalKey) {
-            digitalKey.status = KeyStatus.USED;
-            digitalKey.active_at = new Date();
-            await this.digitalKeyRepository.save(digitalKey);
+      this.logger.log(
+        `Found order: ${orderId}, type: ${order.order_type}, current status: ${order.status}`,
+      );
+
+      order.expired_at = null;
+      order.completed_at = new Date();
+
+      // If digital order, update digital key status to USED and active_at
+      if (order.order_type === OrderType.DIGITAL) {
+        order.status = OrderStatus.COMPLETED;
+
+        for (const item of order.orderItems) {
+          if (item.digitalKey) {
+            const digitalKey = await this.digitalKeyRepository.findOne({
+              where: { id: item.digitalKey.id, status: KeyStatus.UNUSED },
+            });
+            if (digitalKey) {
+              digitalKey.status = KeyStatus.USED;
+              digitalKey.active_at = new Date();
+              await this.digitalKeyRepository.save(digitalKey);
+            }
           }
+
+          const stock = await this.stockRepository.findOne({
+            where: { variant: { id: item.productVariant.id } },
+          });
+
+          if (!stock) {
+            throw new BadRequestException('Stock not found for variant');
+          }
+
+          stock.reserved = Math.max(0, stock.reserved - item.quantity);
+          stock.quantity = Math.max(0, stock.quantity - item.quantity);
+          const result = await this.stockRepository.save(stock);
         }
 
-        const stock = await this.stockRepository.findOne({
-          where: { variant: { id: item.productVariant.id } },
-        });
-
-        if (!stock) {
-          throw new BadRequestException('Stock not found for variant');
-        }
-
-        stock.reserved = Math.max(0, stock.reserved - item.quantity);
-        stock.quantity = Math.max(0, stock.quantity - item.quantity);
-        const result = await this.stockRepository.save(stock);
+        await this.orderRepository.save(order);
+        console.log('Order updated to PAID:', order);
       }
 
-      await this.orderRepository.save(order);
-      console.log('Order updated to PAID:', order);
-    }
+      if (order.order_type === OrderType.PHYSICAL) {
+        order.status = OrderStatus.PAID;
 
-    if (order.order_type === OrderType.PHYSICAL) {
-      order.status = OrderStatus.PAID;
+        for (const item of order.orderItems) {
+          const stock = await this.stockRepository.findOne({
+            where: { variant: { id: item.productVariant.id } },
+          });
 
-      for (const item of order.orderItems) {
-        const stock = await this.stockRepository.findOne({
-          where: { variant: { id: item.productVariant.id } },
-        });
+          if (!stock) {
+            throw new BadRequestException('Stock not found for variant');
+          }
 
-        if (!stock) {
-          throw new BadRequestException('Stock not found for variant');
+          stock.reserved = Math.max(0, stock.reserved - item.quantity);
+          await this.stockRepository.save(stock);
+          this.logger.log(
+            `Released stock for variant: ${item.productVariant.id}`,
+          );
         }
-
-        stock.reserved = Math.max(0, stock.reserved - item.quantity);
-        await this.stockRepository.save(stock);
-        console.log('Released stock for variant:', item.productVariant.id);
+        await this.orderRepository.save(order);
+        this.logger.log(`Order updated to COMPLETED: ${order.id}`);
       }
-      await this.orderRepository.save(order);
-      console.log('Order updated to PAID:', order);
+
+      this.logger.log(
+        `Successfully processed momo payment success for order: ${orderId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error in handleMomoPaymentSuccess for order ${orderId}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
     }
   }
 

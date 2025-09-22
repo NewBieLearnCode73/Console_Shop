@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { PaymentService } from '../service/payment.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
@@ -6,6 +6,8 @@ import { PaymentStatus } from 'src/constants/payment_status.enum';
 
 @Controller()
 export class PaymentConsumer {
+  private readonly logger = new Logger(PaymentConsumer.name);
+
   constructor(private readonly paymentService: PaymentService) {}
 
   @EventPattern('create_momo_payment')
@@ -20,7 +22,21 @@ export class PaymentConsumer {
 
   @EventPattern('momo_payment_success')
   async handleMomoPaymentSuccess(@Payload() payload: { orderId: string }) {
-    await this.paymentService.handleMomoPaymentSuccess(payload.orderId);
+    try {
+      this.logger.log(
+        `Processing momo payment success for order: ${payload.orderId}`,
+      );
+      await this.paymentService.handleMomoPaymentSuccess(payload.orderId);
+      this.logger.log(
+        `Successfully processed momo payment success for order: ${payload.orderId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error processing momo payment success for order: ${payload.orderId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
+    }
   }
 
   @EventPattern('momo_payment_failed')
