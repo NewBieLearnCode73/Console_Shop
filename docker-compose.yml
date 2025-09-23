@@ -65,6 +65,19 @@ services:
     env_file:
       - .env
 
+  # app:
+  #   build: .
+  #   container_name: console_shop
+  #   restart: always
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - kafka
+  #   ports:
+  #     - '3000:3000'
+  #   env_file:
+  #     - .env
+
 volumes:
   console_shop_postgres_data:
   console_shop_redis_data:

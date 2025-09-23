@@ -31,7 +31,7 @@ export class AuthService {
     @InjectRedis()
     private readonly redis: Redis,
     private readonly kafkaService: KafkaService,
-  ) { }
+  ) {}
   getTTLToken(token: string): number {
     try {
       if (!token) return 0;
@@ -350,11 +350,12 @@ export class AuthService {
 
   async generateActiveLink(email: string) {
     const activeCode = await this.genTokenRedisActiveAccount(email);
-    const serverHost = this.configService.get<string>('SERVER_HOST');
-    const serverPort = this.configService.get<string>('SERVER_PORT');
+    // const serverHost = this.configService.get<string>('SERVER_HOST');
+    // const serverPort = this.configService.get<string>('SERVER_PORT');
+    const BEURL = this.configService.get<string>('BE_URL');
 
-    const FEURL = `${serverHost}:${serverPort}`;
-    return `${FEURL}/api/auth/active-account-verify?email=${email}&code=${activeCode}`;
+    // const FEURL = `${serverHost}:${serverPort}`;
+    return `${BEURL}/api/auth/active-account-verify?email=${email}&code=${activeCode}`;
   }
 
   async sendActiveAccountEmail(email: string, name: string) {

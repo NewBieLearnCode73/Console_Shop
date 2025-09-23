@@ -16,7 +16,12 @@ async function bootstrap() {
   app.useGlobalFilters(new CustomExceptionFilter());
   app.use(cookieParser());
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://127.0.0.1:5500'],
+    origin: [
+      'https://www.gch-console.shop',
+      'https://api.gch-console.shop',
+      'http://localhost:3001', // Giữ lại cho development
+      'http://127.0.0.1:5500', // Giữ lại cho development
+    ],
     credentials: true,
   });
 
