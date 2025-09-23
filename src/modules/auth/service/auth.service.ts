@@ -352,10 +352,10 @@ export class AuthService {
     const activeCode = await this.genTokenRedisActiveAccount(email);
     // const serverHost = this.configService.get<string>('SERVER_HOST');
     // const serverPort = this.configService.get<string>('SERVER_PORT');
-    const BEURL = this.configService.get<string>('BE_URL');
+    const FEURL = this.configService.get<string>('FEFRONTEND_URL');
 
     // const FEURL = `${serverHost}:${serverPort}`;
-    return `${BEURL}/api/auth/active-account-verify?email=${email}&code=${activeCode}`;
+    return `${FEURL}/api/auth/active-account-verify?email=${email}&code=${activeCode}`;
   }
 
   async sendActiveAccountEmail(email: string, name: string) {
