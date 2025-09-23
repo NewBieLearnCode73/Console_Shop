@@ -48,6 +48,7 @@ export class AuthController {
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
@@ -55,6 +56,7 @@ export class AuthController {
       res.cookie('refresh_token', tokens.refresh_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -85,12 +87,14 @@ export class AuthController {
       req.res?.cookie('access_token', access_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
       req.res?.cookie('refresh_token', refresh_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -116,6 +120,7 @@ export class AuthController {
       res.cookie('access_token', access_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
@@ -141,11 +146,13 @@ export class AuthController {
       res.clearCookie('access_token', {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
       });
       res.clearCookie('refresh_token', {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
       });
 
@@ -232,12 +239,14 @@ export class AuthController {
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
       res.cookie('refresh_token', tokens.refresh_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -288,12 +297,14 @@ export class AuthController {
       res.cookie('access_token', tokens.access_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
       res.cookie('refresh_token', tokens.refresh_token, {
         httpOnly: true,
         sameSite: 'none',
+        domain: '.' + this.configService.getOrThrow('DOMAIN_NAME'),
         secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
