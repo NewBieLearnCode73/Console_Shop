@@ -1,4 +1,5 @@
 import { BrevoAxios } from 'src/configs/axios/axios_helper';
+import { OrderStatus } from 'src/constants/order_status.enum';
 
 export interface BrevoEmailPayload {
   sender: { name: string; email: string };
@@ -214,6 +215,57 @@ export function BrevoTemplateActiveAccount(
   };
 }
 
+export function BrevoTemplatePaymentSuccess(
+  email: string,
+  name: string,
+  orderId: string,
+  status: OrderStatus,
+) {
+  return {
+    sender: {
+      name: 'Console Shop Admin',
+      email: 'ndchieu73@gmail.com',
+    },
+    to: [{ email, name }],
+    subject: 'Payment Successful - Order Confirmation',
+    htmlContent: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <!-- Header -->
+
+      <div style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🛒 Console Shop</h1>
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Secure Shopping Platform</p>
+      </div>
+      <!-- Body -->
+      <div style="background: #ffffff; padding: 40px 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+        <h2 style="color: #495057; margin-top: 0;">Payment Successful!</h2>
+        <p style="color: #6c757d; line-height: 1.6; margin-bottom: 30px;">
+          Hi <strong>${name}</strong>,<br><br>
+          Thank you for your purchase! We are pleased to inform you that your payment has been successfully processed.
+        </p>
+        <!-- Order Details -->
+        <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 30px 0;">
+          <h3 style="margin-top: 0; color: #495057;">Order Details</h3>
+          <p style="margin: 0; color: #6c757d; font-size: 14px;">
+            <strong>Order ID:</strong> ${orderId}<br>
+            <strong>Order Date:</strong> ${new Date().toLocaleDateString()}<br>
+            <strong>Status:</strong> ${status}
+          </p>
+        </div>
+        <!-- Footer Note -->
+        <p style="color: #6c757d; font-size: 14px; margin-bottom: 0;">
+          If you have any questions or need further assistance, please do not hesitate to contact our support team.
+        </p>
+        <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+        <p style="color: #adb5bd; font-size: 12px; text-align: center; margin: 0;">
+          © 2025 Console Shop. All rights reserved.
+        </p>
+      </div>
+    </div>
+    `,
+  };
+}
+
 export async function sendMailResetPassword(
   email: string,
   name: string,
@@ -249,6 +301,21 @@ export async function sendMailProvidePassword(
     email,
     name,
     password,
+  );
+  return await BrevoAxios.post('/email', emailData);
+}
+
+export async function sendMailPaymentSuccess(
+  email: string,
+  name: string,
+  orderDetails: string,
+  status: OrderStatus,
+) {
+  const emailData: BrevoEmailPayload = BrevoTemplatePaymentSuccess(
+    email,
+    name,
+    orderDetails,
+    status,
   );
   return await BrevoAxios.post('/email', emailData);
 }

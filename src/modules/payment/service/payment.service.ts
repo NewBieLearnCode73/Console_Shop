@@ -15,6 +15,7 @@ import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
 import { Stock } from 'src/modules/product/entity/stock.entity';
 import { DataSource, Repository } from 'typeorm';
 import { Payment } from '../entity/payment.entity';
+import { sendMailPaymentSuccess } from 'src/utils/brevo_helper';
 
 @Injectable()
 export class PaymentService {
@@ -111,6 +112,7 @@ export class PaymentService {
           'orderItems',
           'orderItems.productVariant',
           'orderItems.digitalKey',
+          'user',
         ],
       });
 
@@ -160,6 +162,14 @@ export class PaymentService {
 
         await this.orderRepository.save(order);
         console.log('Order updated to PAID:', order);
+
+        // Send Kafka event for digital key delivery
+        await sendMailPaymentSuccess(
+          order.user.email,
+          order.user.email,
+          order.id,
+          OrderStatus.COMPLETED,
+        );
       }
 
       if (order.order_type === OrderType.PHYSICAL) {
@@ -186,6 +196,13 @@ export class PaymentService {
 
       this.logger.log(
         `Successfully processed momo payment success for order: ${orderId}`,
+      );
+
+      await sendMailPaymentSuccess(
+        order.user.email,
+        order.user.email,
+        order.id,
+        OrderStatus.PAID,
       );
     } catch (error) {
       this.logger.error(
