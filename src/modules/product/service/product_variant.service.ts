@@ -208,6 +208,7 @@ export class ProductVariantService {
       color: variant.color,
       other_attributes: variant.other_attributes,
       images: variant.images,
+      product: variant.product,
     }));
   }
   // *************************************** FOR ALL - END ****************************************/
