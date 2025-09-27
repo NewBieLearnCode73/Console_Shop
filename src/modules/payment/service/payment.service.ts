@@ -186,8 +186,6 @@ export class PaymentService {
             throw new BadRequestException('Stock not found for variant');
           }
 
-          stock.reserved = Math.max(0, stock.reserved - item.quantity);
-          stock.quantity = Math.max(0, stock.quantity - item.quantity);
           await this.stockRepository.save(stock);
           this.logger.log(
             `Released stock for variant: ${item.productVariant.id}`,

@@ -409,8 +409,8 @@ export class AuthService {
 
     const activeCode = await this.genTokenRedisResetPassword(email);
     const frontEndHost = this.configService.getOrThrow<string>('FRONTEND_URL');
-
-    return `${frontEndHost}/api/auth/reset-password-verify?email=${email}&code=${activeCode}`;
+    // return `http://localhost:3001/signin/reset-password/verify?email=${email}&code=${activeCode}`;
+    return `${frontEndHost}/signin/reset-password/verify?email=${email}&code=${activeCode}`;
   }
 
   async sendResetPasswordEmail(email: string, name: string) {

@@ -1247,9 +1247,9 @@ export class OrderService {
 
     const result = await this.ghnService.createOrder({
       order_id: responseOrder.orderId,
-      to_name: decryptProfile(responseOrder.to_name),
-      to_phone: decryptProfile(responseOrder.to_phone),
-      to_address: decryptProfile(responseOrder.to_address),
+      to_name: responseOrder.to_name,
+      to_phone: responseOrder.to_phone,
+      to_address: responseOrder.to_address,
       to_ward_code: responseOrder.to_ward_code,
       to_district_id: responseOrder.to_district_id,
       cod_amount: Number(order.total_amount),

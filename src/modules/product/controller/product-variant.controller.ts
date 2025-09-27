@@ -176,6 +176,7 @@ export class ProductVariantController {
           fileSize: 5 * 1024 * 1024,
         },
         fileFilter: (req, file, cb) => {
+          console.log('Uploaded file:', file.originalname, file.mimetype);
           const imageMimeTypes = [
             'image/jpeg',
             'image/jpg',
@@ -190,7 +191,10 @@ export class ProductVariantController {
 
           if (
             file.mimetype === 'text/csv' ||
-            file.mimetype === 'application/vnd.ms-excel'
+            file.mimetype === 'application/vnd.ms-excel' ||
+            file.mimetype === 'application/csv' ||
+            file.mimetype === 'text/plain' ||
+            file.mimetype === 'application/octet-stream'
           ) {
             return cb(null, true);
           }

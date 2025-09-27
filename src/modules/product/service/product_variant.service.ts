@@ -389,7 +389,16 @@ export class ProductVariantService {
     galleryImages: Express.Multer.File[],
     digitalKeysCsv: Express.Multer.File,
   ) {
-    if (!digitalKeysCsv || digitalKeysCsv.mimetype !== 'text/csv') {
+    if (
+      !digitalKeysCsv ||
+      ![
+        'text/csv',
+        'application/vnd.ms-excel',
+        'application/csv',
+        'text/plain',
+        'application/octet-stream',
+      ].includes(digitalKeysCsv.mimetype)
+    ) {
       throw new BadRequestException('Invalid CSV file');
     }
 
