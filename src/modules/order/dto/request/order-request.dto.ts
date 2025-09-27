@@ -7,6 +7,10 @@ export class OrderDigitalBuyNowRequestDto {
   @IsNotEmpty()
   @IsUUID()
   productVariantId: string;
+
+  @IsNotEmpty()
+  @Min(1)
+  quantity: number;
 }
 
 export class OrderPhysicalBuyNowRequestDto {

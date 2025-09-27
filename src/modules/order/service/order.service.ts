@@ -25,7 +25,7 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import { Redis } from 'ioredis';
 import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
 import { KeyStatus } from 'src/constants/key_status.enum';
-import { decryptKeyGame } from 'src/utils/crypto_helper';
+import { decryptKeyGame, decryptProfile } from 'src/utils/crypto_helper';
 import { ProductStatus } from 'src/constants/product_status.enum';
 import { PaymentMethod } from 'src/constants/payment_method.enum';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
@@ -36,6 +36,10 @@ import { PaymentStatus } from 'src/constants/payment_status.enum';
 import { OrderCheckoutCartRequestDto } from '../dto/request/order-request.dto';
 import { RefundRequest } from 'src/modules/refund/entity/refund_request.entity';
 import { RefundStatus } from 'src/constants/refund_status.enum';
+import {
+  sendMailChangeOrderAddress,
+  sendMailPaymentSuccessPhysical,
+} from 'src/utils/brevo_helper';
 
 @Injectable()
 export class OrderService {
@@ -118,7 +122,7 @@ export class OrderService {
     userId: string,
     orderDigitalBuyNowRequestDto: OrderDigitalBuyNowRequestDto,
   ) {
-    const { productVariantId } = orderDigitalBuyNowRequestDto;
+    const { productVariantId, quantity } = orderDigitalBuyNowRequestDto;
     const productVariant = await this.productVariantRepository.findOne({
       where: {
         id: productVariantId,
@@ -155,16 +159,16 @@ export class OrderService {
         );
 
       const available = stock.quantity - stock.reserved;
-      if (available <= 0)
+      if (available < quantity)
         throw new BadRequestException(
           'Insufficient stock for product variant!',
         );
 
-      stock.reserved += 1;
+      stock.reserved += quantity;
       await manager.getRepository(Stock).save(stock);
 
-      // Lock
-      const availableKey = await manager
+      // Get multiple digital keys based on quantity
+      const availableKeys = await manager
         .getRepository(DigitalKey)
         .createQueryBuilder('digitalKey')
         .setLock('pessimistic_write')
@@ -172,19 +176,30 @@ export class OrderService {
         .andWhere('variant.id = :variantId', { variantId: productVariant.id })
         .andWhere('digitalKey.status = :status', { status: KeyStatus.UNUSED })
         .andWhere('digitalKey.orderItem IS NULL')
-        .getOne();
+        .limit(quantity)
+        .getMany();
 
-      if (!availableKey)
-        throw new BadRequestException('No available digital keys in stock!');
+      if (!availableKeys || availableKeys.length < quantity)
+        throw new BadRequestException(
+          'Not enough available digital keys in stock!',
+        );
 
-      const orderItem = await manager.getRepository(OrderItem).save({
-        quantity: 1,
-        price: productVariant.price,
-        productVariant,
-        digitalKey: availableKey,
-      });
+      // Create order items for each digital key
+      const orderItems: OrderItem[] = [];
+      for (let i = 0; i < quantity; i++) {
+        const orderItem = await manager.getRepository(OrderItem).save({
+          quantity: 1,
+          price: productVariant.price,
+          productVariant,
+          digitalKey: availableKeys[i],
+        });
+        orderItems.push(orderItem);
+      }
 
-      const sub_total = orderItem.price * orderItem.quantity;
+      const sub_total = orderItems.reduce(
+        (total, item) => total + item.price * item.quantity,
+        0,
+      );
 
       const expiredAt = new Date();
       expiredAt.setMinutes(expiredAt.getMinutes() + 100);
@@ -196,7 +211,7 @@ export class OrderService {
         total_amount: sub_total,
         order_type: OrderType.DIGITAL,
         payment_method: PaymentMethod.MOMO_WALLET,
-        orderItems: [orderItem],
+        orderItems,
         user,
         expired_at: expiredAt,
       });
@@ -230,7 +245,7 @@ export class OrderService {
       const orderItems: OrderItem[] = [];
 
       for (const item of orderCheckoutRequestDto) {
-        const { productVariantId } = item;
+        const { productVariantId, quantity } = item;
 
         const productVariant = await this.productVariantRepository.findOne({
           where: {
@@ -264,16 +279,16 @@ export class OrderService {
           );
 
         const available = stock.quantity - stock.reserved;
-        if (available <= 0)
+        if (available < quantity)
           throw new BadRequestException(
             `Insufficient stock for product variant ${productVariantId}!`,
           );
 
-        stock.reserved += 1;
+        stock.reserved += quantity;
         await manager.getRepository(Stock).save(stock);
 
-        // Digital key lock
-        const availableKey = await manager
+        // Get multiple digital keys based on quantity
+        const availableKeys = await manager
           .getRepository(DigitalKey)
           .createQueryBuilder('digitalKey')
           .setLock('pessimistic_write')
@@ -281,22 +296,26 @@ export class OrderService {
           .andWhere('variant.id = :variantId', { variantId: productVariant.id })
           .andWhere('digitalKey.status = :status', { status: KeyStatus.UNUSED })
           .andWhere('digitalKey.orderItem IS NULL')
-          .getOne();
+          .limit(quantity)
+          .getMany();
 
-        if (!availableKey)
+        if (!availableKeys || availableKeys.length < quantity)
           throw new BadRequestException(
-            `No available digital keys for product variant ${productVariant.id} in stock!`,
+            `Not enough available digital keys for product variant ${productVariant.id} in stock!`,
           );
 
-        const orderItem = await manager.getRepository(OrderItem).save({
-          quantity: 1,
-          price: productVariant.price,
-          productVariant,
-          digitalKey: availableKey,
-        });
+        // Create order items for each digital key
+        for (let i = 0; i < quantity; i++) {
+          const orderItem = await manager.getRepository(OrderItem).save({
+            quantity: 1,
+            price: productVariant.price,
+            productVariant,
+            digitalKey: availableKeys[i],
+          });
 
-        orderItems.push(orderItem);
-        sub_total += orderItem.price * orderItem.quantity;
+          orderItems.push(orderItem);
+          sub_total += orderItem.price * orderItem.quantity;
+        }
       }
 
       // Order info
@@ -542,6 +561,18 @@ export class OrderService {
         });
 
         const result = await manager.getRepository(Order).save(order);
+
+        await sendMailPaymentSuccessPhysical(
+          order.user.email,
+          order.user.email,
+          order.orderItems,
+          savedOrderAddress.to_name,
+          savedOrderAddress.to_phone,
+          savedOrderAddress.to_address,
+          savedOrderAddress.to_province_name,
+          savedOrderAddress.to_ward_code,
+        );
+
         return result;
       });
     }
@@ -771,6 +802,18 @@ export class OrderService {
         });
 
         const result = await manager.getRepository(Order).save(order);
+
+        await sendMailPaymentSuccessPhysical(
+          order.user.email,
+          order.user.email,
+          order.orderItems,
+          savedOrderAddress.to_name,
+          savedOrderAddress.to_phone,
+          savedOrderAddress.to_address,
+          savedOrderAddress.to_province_name,
+          savedOrderAddress.to_ward_code,
+        );
+
         return result;
       }
 
@@ -920,7 +963,12 @@ export class OrderService {
         user: { id: userId },
         order_type: OrderType.PHYSICAL,
       },
-      relations: ['orderAddress', 'user'],
+      relations: [
+        'orderAddress',
+        'user',
+        'orderItems',
+        'orderItems.productVariant',
+      ],
     });
 
     if (!order)
@@ -960,6 +1008,17 @@ export class OrderService {
       order.orderAddress,
     );
     const result = await this.orderRepository.save(order);
+
+    await sendMailChangeOrderAddress(
+      order.user.email,
+      order.user.email,
+      order.orderItems,
+      order.orderAddress.to_name,
+      order.orderAddress.to_phone,
+      order.orderAddress.to_address,
+      order.orderAddress.to_province_name,
+      order.orderAddress.to_ward_code,
+    );
 
     return result;
   }
@@ -1078,6 +1137,13 @@ export class OrderService {
       ],
     });
     if (!order) throw new BadRequestException('Order not found!');
+
+    // Decrypt sensitive information
+    order.orderAddress.to_name = decryptProfile(order.orderAddress.to_name);
+    order.orderAddress.to_phone = decryptProfile(order.orderAddress.to_phone);
+    order.orderAddress.to_address = decryptProfile(
+      order.orderAddress.to_address,
+    );
     return order;
   }
 
@@ -1085,7 +1151,7 @@ export class OrderService {
     const order = await this.orderRepository.findOne({
       where: {
         id: orderId,
-        status: In([OrderStatus.PENDING_CONFIRMATION, OrderStatus.PAID]),
+        status: In([OrderStatus.PENDING_CONFIRMATION]),
         order_type: OrderType.PHYSICAL,
       },
       relations: ['orderItems', 'orderItems.productVariant', 'refundRequest'],
@@ -1095,7 +1161,7 @@ export class OrderService {
 
     if (!order)
       throw new BadRequestException(
-        'Order not found or not in PENDING_CONFIRMATION/PAID status!',
+        'Order not found or not in PENDING_CONFIRMATION status!',
       );
 
     if (
@@ -1115,7 +1181,7 @@ export class OrderService {
     const order = await this.orderRepository.findOne({
       where: {
         id: orderId,
-        status: OrderStatus.CONFIRMED,
+        status: In([OrderStatus.CONFIRMED, OrderStatus.PAID]),
         order_type: OrderType.PHYSICAL,
       },
       relations: [
@@ -1129,7 +1195,7 @@ export class OrderService {
 
     if (!order)
       throw new BadRequestException(
-        'Order not found or not in CONFIRMED status!',
+        'Order not found or not in CONFIRMED/PAID status!',
       );
 
     console.log('Order to ship:', order);
@@ -1144,9 +1210,9 @@ export class OrderService {
 
     const responseOrder: OrderShippingResponseDto = {
       orderId: order.id,
-      to_name: order.orderAddress.to_name,
-      to_phone: order.orderAddress.to_phone,
-      to_address: order.orderAddress.to_address,
+      to_name: decryptProfile(order.orderAddress.to_name),
+      to_phone: decryptProfile(order.orderAddress.to_phone),
+      to_address: decryptProfile(order.orderAddress.to_address),
       to_ward_code: order.orderAddress.to_ward_code,
       to_district_id: order.orderAddress.to_district_id,
       cod_amount: order.total_amount,
@@ -1181,9 +1247,9 @@ export class OrderService {
 
     const result = await this.ghnService.createOrder({
       order_id: responseOrder.orderId,
-      to_name: responseOrder.to_name,
-      to_phone: responseOrder.to_phone,
-      to_address: responseOrder.to_address,
+      to_name: decryptProfile(responseOrder.to_name),
+      to_phone: decryptProfile(responseOrder.to_phone),
+      to_address: decryptProfile(responseOrder.to_address),
       to_ward_code: responseOrder.to_ward_code,
       to_district_id: responseOrder.to_district_id,
       cod_amount: Number(order.total_amount),

@@ -7,6 +7,8 @@ config();
 const configService = new ConfigService();
 
 const DIGITAL_KEY_AES = configService.getOrThrow<string>('DIGITAL_KEY_AES');
+const PROFILE_AES = configService.getOrThrow<string>('PROFILE_AES');
+
 const DIGITAL_KEY_SHA256 =
   configService.getOrThrow<string>('DIGITAL_KEY_SHA256');
 
@@ -21,5 +23,14 @@ export function encryptKeyGame(keyGame: string): string {
 
 export function decryptKeyGame(encryptedKey: string): string {
   const bytes = CryptoJS.AES.decrypt(encryptedKey, DIGITAL_KEY_AES);
+  return bytes.toString(CryptoJS.enc.Utf8);
+}
+
+export function encryptProfile(data: string): string {
+  return CryptoJS.AES.encrypt(data, PROFILE_AES).toString();
+}
+
+export function decryptProfile(encryptedData: string): string {
+  const bytes = CryptoJS.AES.decrypt(encryptedData, PROFILE_AES);
   return bytes.toString(CryptoJS.enc.Utf8);
 }

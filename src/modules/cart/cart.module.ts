@@ -12,7 +12,6 @@ import { Product } from '../product/entity/product.entity';
 import { Address } from '../user/entity/address.entity';
 import { Order } from '../order/entity/order.entity';
 import { OrderModule } from '../order/order.module';
-import { OrderService } from '../order/service/order.service';
 
 @Module({
   imports: [

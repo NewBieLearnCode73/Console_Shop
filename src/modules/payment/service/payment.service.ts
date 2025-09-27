@@ -15,7 +15,10 @@ import { DigitalKey } from 'src/modules/product/entity/digital_key.entity';
 import { Stock } from 'src/modules/product/entity/stock.entity';
 import { DataSource, Repository } from 'typeorm';
 import { Payment } from '../entity/payment.entity';
-import { sendMailPaymentSuccess } from 'src/utils/brevo_helper';
+import {
+  sendMailPaymentSuccessDigital,
+  sendMailPaymentSuccessPhysical,
+} from 'src/utils/brevo_helper';
 
 @Injectable()
 export class PaymentService {
@@ -113,6 +116,7 @@ export class PaymentService {
           'orderItems.productVariant',
           'orderItems.digitalKey',
           'user',
+          'orderAddress',
         ],
       });
 
@@ -163,12 +167,10 @@ export class PaymentService {
         await this.orderRepository.save(order);
         console.log('Order updated to PAID:', order);
 
-        // Send Kafka event for digital key delivery
-        await sendMailPaymentSuccess(
+        await sendMailPaymentSuccessDigital(
           order.user.email,
           order.user.email,
-          order.id,
-          OrderStatus.COMPLETED,
+          order.orderItems,
         );
       }
 
@@ -185,6 +187,7 @@ export class PaymentService {
           }
 
           stock.reserved = Math.max(0, stock.reserved - item.quantity);
+          stock.quantity = Math.max(0, stock.quantity - item.quantity);
           await this.stockRepository.save(stock);
           this.logger.log(
             `Released stock for variant: ${item.productVariant.id}`,
@@ -198,12 +201,28 @@ export class PaymentService {
         `Successfully processed momo payment success for order: ${orderId}`,
       );
 
-      await sendMailPaymentSuccess(
+      await sendMailPaymentSuccessPhysical(
         order.user.email,
         order.user.email,
-        order.id,
-        OrderStatus.PAID,
+        order.orderItems,
+        order.orderAddress.to_name,
+        order.orderAddress.to_phone,
+        order.orderAddress.to_address,
+        order.orderAddress.to_province_name,
+        order.orderAddress.to_ward_code,
       );
+
+      console.log('Payment success email sent for order:', {
+        orderId: order.id,
+        email: order.user.email,
+        name: order.user.email,
+        orderItems: order.orderItems,
+        to_name: order.orderAddress.to_name,
+        to_phone: order.orderAddress.to_phone,
+        to_address: order.orderAddress.to_address,
+        to_province_name: order.orderAddress.to_province_name,
+        to_ward_code: order.orderAddress.to_ward_code,
+      });
     } catch (error) {
       this.logger.error(
         `Error in handleMomoPaymentSuccess for order ${orderId}:`,

@@ -20,6 +20,7 @@ import {
   DefaultAddressResponseDto,
 } from '../dto/response/address-response.dto';
 import { PaginationResult } from 'src/utils/pagination/pagination_result';
+import { encryptProfile, decryptProfile } from '../../../utils/crypto_helper';
 
 @Injectable()
 export class AddressService {
@@ -31,6 +32,25 @@ export class AddressService {
     @InjectRepository(Profile)
     private readonly profileRepository: Repository<Profile>,
   ) {}
+
+  private encryptSensitiveFields(address: any) {
+    return {
+      ...address,
+      to_name: encryptProfile(address.to_name),
+      to_phone: encryptProfile(address.to_phone),
+      to_address: encryptProfile(address.to_address),
+    };
+  }
+
+  private decryptSensitiveFields(address: any) {
+    if (!address) return address;
+    return {
+      ...address,
+      to_name: decryptProfile(address.to_name),
+      to_phone: decryptProfile(address.to_phone),
+      to_address: decryptProfile(address.to_address),
+    };
+  }
 
   async createNewUserAddress(
     userId: string,
@@ -46,10 +66,17 @@ export class AddressService {
       throw new NotFoundException(`User with id ${userId}`);
     }
 
-    const userAddress = this.addressRepository.create({
+    // Encrypt sensitive data before saving
+    const encryptedAddressData = this.encryptSensitiveFields({
       to_name: createAddressRequestDto.to_name,
       to_phone: createAddressRequestDto.to_phone,
       to_address: createAddressRequestDto.to_address,
+    });
+
+    const userAddress = this.addressRepository.create({
+      to_name: encryptedAddressData.to_name,
+      to_phone: encryptedAddressData.to_phone,
+      to_address: encryptedAddressData.to_address,
       to_ward_code: createAddressRequestDto.to_ward_code,
       to_district_id: createAddressRequestDto.to_district_id,
       to_province_name: createAddressRequestDto.to_province_name,
@@ -58,7 +85,10 @@ export class AddressService {
 
     const newUserAddres = await this.addressRepository.save(userAddress);
 
-    return plainToInstance(CreateAddressResponseDto, newUserAddres, {
+    // Decrypt sensitive data before returning
+    const decryptedAddress = this.decryptSensitiveFields(newUserAddres);
+
+    return plainToInstance(CreateAddressResponseDto, decryptedAddress, {
       excludeExtraneousValues: true,
     });
   }
@@ -73,7 +103,12 @@ export class AddressService {
       relations: ['user'],
     });
 
-    return plainToInstance(DefaultAddressResponseDto, defaultAddress, {
+    // Decrypt sensitive data before returning
+    const decryptedAddresses = defaultAddress.map((address) =>
+      this.decryptSensitiveFields(address),
+    );
+
+    return plainToInstance(DefaultAddressResponseDto, decryptedAddresses, {
       excludeExtraneousValues: true,
     });
   }
@@ -97,7 +132,12 @@ export class AddressService {
       },
     });
 
-    const response = listAddress.map((x) =>
+    // Decrypt sensitive data before returning
+    const decryptedAddresses = listAddress.map((address) =>
+      this.decryptSensitiveFields(address),
+    );
+
+    const response = decryptedAddresses.map((x) =>
       plainToInstance(DefaultAddressResponseDto, x, {
         excludeExtraneousValues: true,
       }),
@@ -165,10 +205,27 @@ export class AddressService {
       );
     }
 
-    this.addressRepository.merge(existAddress, updateAddressDto);
+    // Encrypt sensitive data before updating
+    const encryptedUpdateData = { ...updateAddressDto };
+    if (updateAddressDto.to_name) {
+      encryptedUpdateData.to_name = decryptProfile(updateAddressDto.to_name);
+    }
+    if (updateAddressDto.to_phone) {
+      encryptedUpdateData.to_phone = decryptProfile(updateAddressDto.to_phone);
+    }
+    if (updateAddressDto.to_address) {
+      encryptedUpdateData.to_address = decryptProfile(
+        updateAddressDto.to_address,
+      );
+    }
+
+    this.addressRepository.merge(existAddress, encryptedUpdateData);
     const newAddress = await this.addressRepository.save(existAddress);
 
-    return plainToInstance(DefaultAddressResponseDto, newAddress, {
+    // Decrypt sensitive data before returning
+    const decryptedAddress = this.decryptSensitiveFields(newAddress);
+
+    return plainToInstance(DefaultAddressResponseDto, decryptedAddress, {
       excludeExtraneousValues: true,
     });
   }

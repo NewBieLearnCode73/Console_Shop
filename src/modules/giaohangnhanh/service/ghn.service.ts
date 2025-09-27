@@ -9,7 +9,7 @@ import {
 import { plainToInstance } from 'class-transformer';
 import { GhnCreateOrderDto, GhnItemType } from '../dto/request/ghn.request';
 import { OrderService } from 'src/modules/order/service/order.service';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from 'src/modules/order/entity/order.entity';
 import { OrderStatus } from 'src/constants/order_status.enum';
@@ -115,7 +115,10 @@ export class GhnService {
     const totalWeight = this.calculateTotalWeight(items);
 
     const order = await this.orderRepository.findOne({
-      where: { id: rest.order_id, status: OrderStatus.CONFIRMED },
+      where: {
+        id: rest.order_id,
+        status: In([OrderStatus.CONFIRMED, OrderStatus.PAID]),
+      },
     });
 
     if (!order) {

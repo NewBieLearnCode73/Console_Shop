@@ -112,10 +112,6 @@ export class CartService {
       throw new BadRequestException('Product variant not found or Inactive!');
     }
 
-    const productOfVariant = await this.productRepository.findOne({
-      where: { variants: { id: productVariantId } },
-    });
-
     const isQuantityValid = await this.stockRepository.findOne({
       where: {
         variant: { id: productVariantId },
@@ -125,15 +121,6 @@ export class CartService {
 
     if (!isQuantityValid) {
       throw new BadRequestException('Invalid quantity');
-    }
-
-    if (
-      productOfVariant?.product_type === ProductType.CARD_DIGITAL_KEY &&
-      quantity !== 1
-    ) {
-      throw new BadRequestException(
-        'Only 1 digital key of variant can be added to the cart!',
-      );
     }
 
     let cart = await this.cartRepository.findOne({
@@ -156,14 +143,7 @@ export class CartService {
       (i) => i.product_variant_id === productVariantId,
     );
 
-    if (
-      item &&
-      productOfVariant?.product_type === ProductType.CARD_DIGITAL_KEY
-    ) {
-      throw new BadRequestException(
-        'Only 1 digital key of variant can be added to the cart! Cart already has this item.',
-      );
-    } else if (item) {
+    if (item) {
       throw new BadRequestException(
         'Item already in cart, please use update cart feature to change quantity.',
       );
@@ -486,6 +466,28 @@ export class CartService {
 
     if (digitalProducts.length === 0) {
       throw new BadRequestException('No digital products in cart to checkout.');
+    }
+
+    // Validate stock and digital keys availability
+    for (const { item, variant } of digitalProducts) {
+      if (!variant) continue;
+
+      const stock = await this.stockRepository.findOne({
+        where: { variant: { id: variant.id } },
+      });
+
+      if (!stock) {
+        throw new BadRequestException(
+          `Stock information not found for product variant ${variant.variant_name}!`,
+        );
+      }
+
+      const available = stock.quantity - stock.reserved;
+      if (available < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for product variant ${variant.variant_name}. Available: ${available}, Requested: ${item.quantity}`,
+        );
+      }
     }
 
     const orderCheckoutRequestDto: OrderCheckoutCartRequestDto[] =

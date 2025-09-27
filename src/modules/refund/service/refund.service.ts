@@ -144,10 +144,18 @@ export class RefundService {
       order: { [sortBy]: order },
       take: limit,
       skip: (page - 1) * limit,
-      relations: ['order', 'reviewedBy', 'finalizedBy'],
+      relations: ['order', 'reviewedBy', 'finalizedBy', 'user', 'user.profile'],
     });
 
-    return PaginationResult(refunds, total, page, limit);
+    const sanitizedRefunds = refunds.map((refund) => {
+      if (refund.user) {
+        const { password, ...userWithoutPassword } = refund.user;
+        return { ...refund, user: userWithoutPassword };
+      }
+      return refund;
+    });
+
+    return PaginationResult(sanitizedRefunds, total, page, limit);
   }
 
   async reviewRefundRequest(
