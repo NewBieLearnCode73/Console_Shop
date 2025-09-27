@@ -94,7 +94,7 @@ export class ProductService {
     filterProductRequestDto: FilterProductRequestDto,
     paginationRequestDto: PaginationRequestDto,
   ) {
-    const { categorySlug, brandSlug } = filterProductRequestDto;
+    const { categorySlug, brandSlug, productType } = filterProductRequestDto;
     const { page, limit, order, sortBy } = paginationRequestDto;
 
     const query = this.productRepository
@@ -111,6 +111,10 @@ export class ProductService {
 
     if (brandSlug) {
       query.andWhere('brand.slug = :brandSlug', { brandSlug });
+    }
+
+    if (productType) {
+      query.andWhere('product.product_type = :productType', { productType });
     }
 
     const [response, total] = await query

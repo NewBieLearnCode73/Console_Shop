@@ -79,4 +79,8 @@ export class FilterProductRequestDto {
   @IsString()
   @IsOptional()
   brandSlug?: string;
+
+  @IsEnum(ProductType)
+  @IsOptional()
+  productType?: ProductType;
 }
