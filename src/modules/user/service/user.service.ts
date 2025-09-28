@@ -17,6 +17,7 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import * as bcrypt from 'bcrypt';
 import { KafkaService } from 'src/modules/kafka/service/kafka.service';
+import { decryptProfile } from 'src/utils/crypto_helper';
 
 @Injectable()
 export class UserService {
@@ -33,22 +34,36 @@ export class UserService {
     }
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['profile'],
+      relations: ['profile', 'addresses'],
       select: {
         id: true,
         role: true,
         is_active: true,
         createdAt: true,
+        updatedAt: true,
         profile: {
           fullname: true,
           avatar_url: true,
         },
         email: true,
+        addresses: true,
       },
     });
 
     if (!user) {
       throw new NotFoundException(`User with id ${userId} is not found!`);
+    }
+
+    // Decrypt addresses
+    if (user.addresses) {
+      user.addresses = user.addresses.map((address) => {
+        return {
+          ...address,
+          to_name: decryptProfile(address.to_name),
+          to_phone: decryptProfile(address.to_phone),
+          to_address: decryptProfile(address.to_address),
+        };
+      });
     }
 
     return user;
