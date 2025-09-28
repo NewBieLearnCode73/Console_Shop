@@ -83,6 +83,23 @@ export class OrderService {
     return PaginationResult(orders, total, page, limit);
   }
 
+  async getOrdersByCustomerId(
+    userId: string,
+    paginationRequestDto: PaginationRequestDto,
+    status?: OrderStatus,
+  ) {
+    const { page, limit, order, sortBy } = paginationRequestDto;
+
+    const [orders, total] = await this.orderRepository.findAndCount({
+      where: { user: { id: userId }, ...(status && { status }) },
+      order: { [sortBy]: order },
+      take: limit,
+      skip: (page - 1) * limit,
+    });
+
+    return PaginationResult(orders, total, page, limit);
+  }
+
   // Get digital keys for an order
   async getDigitalKeys(
     userId: string,

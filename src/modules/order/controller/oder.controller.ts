@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseEnumPipe,
   Patch,
   Post,
   Put,
@@ -12,6 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   ChangeOrderAddressRequestDto,
+  FindAllOrdersByCustomerIdRequestDto,
   OrderDigitalBuyNowRequestDto,
   OrderDigitalKeyRequestDto,
   OrderIdRequestDto,
@@ -24,6 +26,7 @@ import { JwtCookieAuthGuard } from 'src/guards/jwt_cookie.guard';
 import { RolesDecorator } from 'src/decorators/role_decorator';
 import { Role } from 'src/constants/role.enum';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
+import { OrderStatus } from 'src/constants/order_status.enum';
 
 @Controller('api/orders')
 export class OrderController {
@@ -127,6 +130,23 @@ export class OrderController {
   @RolesDecorator([Role.ADMIN, Role.MANAGER])
   async getOrderStatus(@Query() paginationRequestDto: PaginationRequestDto) {
     return await this.orderService.getAllOrders(paginationRequestDto);
+  }
+
+  @Get('/admin-manager/customer-orders/:customerId')
+  @UseGuards(JwtCookieAuthGuard)
+  @RolesDecorator([Role.ADMIN, Role.MANAGER])
+  async getOrdersByCustomerId(
+    @Param()
+    findAllOrdersByCustomerIdRequestDto: FindAllOrdersByCustomerIdRequestDto,
+    @Query() paginationRequestDto: PaginationRequestDto,
+    @Query('status', new ParseEnumPipe(OrderStatus, { optional: true }))
+    status?: OrderStatus,
+  ) {
+    return await this.orderService.getOrdersByCustomerId(
+      findAllOrdersByCustomerIdRequestDto.customerId,
+      paginationRequestDto,
+      status,
+    );
   }
 
   @Get('/admin-manager/find-by-status/:status')

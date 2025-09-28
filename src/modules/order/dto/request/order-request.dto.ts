@@ -82,3 +82,9 @@ export class OrderStatusRequestDto {
   @IsEnum(OrderStatus)
   status: OrderStatus;
 }
+
+export class FindAllOrdersByCustomerIdRequestDto {
+  @IsNotEmpty()
+  @IsUUID()
+  customerId: string;
+}
