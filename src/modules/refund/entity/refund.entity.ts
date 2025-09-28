@@ -16,7 +16,10 @@ export class Refund extends AbstractEntity<Refund> {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
-  @OneToOne(() => RefundRequest, { nullable: false, onDelete: 'CASCADE' })
+  @OneToOne(() => RefundRequest, (refundRequest) => refundRequest.refund, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   refundRequest: RefundRequest;
 }

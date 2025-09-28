@@ -10,6 +10,7 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Refund } from './refund.entity';
 
 @Entity()
 export class RefundRequest extends AbstractEntity<RefundRequest> {
@@ -52,4 +53,8 @@ export class RefundRequest extends AbstractEntity<RefundRequest> {
 
   @Column({ type: 'timestamp', nullable: true })
   finalizedAt: Date;
+
+  // Inverse relation: RefundRequest -> Refund
+  @OneToOne(() => Refund, (refund) => refund.refundRequest, { nullable: true })
+  refund: Refund;
 }

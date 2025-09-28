@@ -32,6 +32,18 @@ export class CreateProductRequestDto {
   @IsString()
   seo_description?: string;
 
+  @IsOptional()
+  @IsNumber()
+  height?: number;
+
+  @IsOptional()
+  @IsNumber()
+  width?: number;
+
+  @IsOptional()
+  @IsNumber()
+  length?: number;
+
   @IsNotEmpty()
   @IsUUID()
   category_id: string;
@@ -51,6 +63,18 @@ export class UpdateProductRequestDto {
   @IsNotEmpty()
   @IsNumber()
   weight: number; // in grams
+
+  @IsOptional()
+  @IsNumber()
+  height?: number;
+
+  @IsOptional()
+  @IsNumber()
+  width?: number;
+
+  @IsOptional()
+  @IsNumber()
+  length?: number;
 
   @IsString()
   seo_title?: string;

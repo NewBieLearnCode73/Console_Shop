@@ -46,6 +46,15 @@ export class Product extends AbstractEntity<Product> implements SeoType {
   seo_description?: string;
   // SEO fields end
 
+  @Column({ nullable: true, default: 10 })
+  height: number;
+
+  @Column({ nullable: true, default: 10 })
+  width: number;
+
+  @Column({ nullable: true, default: 10 })
+  length: number;
+
   @Column({ default: 0 })
   weight: number; // in grams
 

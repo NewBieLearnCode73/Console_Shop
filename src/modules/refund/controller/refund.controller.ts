@@ -22,7 +22,6 @@ import {
 import { RefundService } from '../service/refund.service';
 import { FinalizedRefundRequestDto } from '../dto/request/refund-request.dto';
 import { PaginationRequestDto } from 'src/utils/pagination/pagination_dto';
-import { RefundStatus } from 'src/constants/refund_status.enum';
 
 @Controller('api/refunds')
 export class RefundController {

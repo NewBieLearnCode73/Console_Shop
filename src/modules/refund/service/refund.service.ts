@@ -125,7 +125,7 @@ export class RefundService {
       order: { [sortBy]: order },
       take: limit,
       skip: (page - 1) * limit,
-      relations: ['order'],
+      relations: ['order', 'refund'],
     });
 
     return PaginationResult(refunds, total, page, limit);

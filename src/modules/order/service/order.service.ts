@@ -518,10 +518,10 @@ export class OrderService {
           address.to_district_id,
           address.to_ward_code,
           2,
-          0,
-          productVariant.product.weight * orderItem.quantity,
-          0,
-          0,
+          productVariant.product.height * orderItem.quantity, // height
+          productVariant.product.weight * orderItem.quantity, // weight
+          productVariant.product.length * orderItem.quantity, // length
+          productVariant.product.width * orderItem.quantity, // width
           orderItem.price * orderItem.quantity,
         );
 
@@ -619,10 +619,10 @@ export class OrderService {
           address.to_district_id,
           address.to_ward_code,
           2,
-          0,
+          productVariant.product.height * orderItem.quantity,
           productVariant.product.weight * orderItem.quantity,
-          0,
-          0,
+          productVariant.product.length * orderItem.quantity,
+          productVariant.product.width * orderItem.quantity,
           orderItem.price * orderItem.quantity,
         );
 
@@ -699,6 +699,9 @@ export class OrderService {
     let sub_total = 0;
     let discount_amount = 0;
     let total_weight = 0;
+    let total_length = 0;
+    let total_width = 0;
+    let total_height = 0;
     const order_items: OrderItem[] = [];
     const savedOrder = await this.dataSource.transaction(async (manager) => {
       // ********************************** THANH TOÁN COD *******************************
@@ -753,16 +756,19 @@ export class OrderService {
           discount_amount += orderItem.price * orderItem.quantity * discount;
           sub_total += orderItem.price * orderItem.quantity;
           total_weight += productVariant.product.weight * orderItem.quantity;
+          total_length += productVariant.product.length * orderItem.quantity;
+          total_width += productVariant.product.width * orderItem.quantity;
+          total_height += productVariant.product.height * orderItem.quantity;
         }
 
         const shipping_fee = await this.ghnService.calculateShippingFee(
           address.to_district_id,
           address.to_ward_code,
           2,
-          0,
+          total_height,
           total_weight,
-          0,
-          0,
+          total_length,
+          total_width,
           sub_total,
         );
 
@@ -869,16 +875,19 @@ export class OrderService {
           discount_amount += orderItem.price * orderItem.quantity * discount;
           sub_total += orderItem.price * orderItem.quantity;
           total_weight += productVariant.product.weight * orderItem.quantity;
+          total_length += productVariant.product.length * orderItem.quantity;
+          total_width += productVariant.product.width * orderItem.quantity;
+          total_height += productVariant.product.height * orderItem.quantity;
         }
 
         const shipping_fee = await this.ghnService.calculateShippingFee(
           address.to_district_id,
           address.to_ward_code,
           2,
-          0,
+          total_height,
           total_weight,
-          0,
-          0,
+          total_length,
+          total_width,
           sub_total,
         );
 
@@ -952,6 +961,14 @@ export class OrderService {
 
     if (!order)
       throw new BadRequestException('Order not found or not your order!');
+
+    if (order.order_type === OrderType.PHYSICAL) {
+      order.orderAddress.to_name = decryptProfile(order.orderAddress.to_name);
+      order.orderAddress.to_phone = decryptProfile(order.orderAddress.to_phone);
+      order.orderAddress.to_address = decryptProfile(
+        order.orderAddress.to_address,
+      );
+    }
 
     return order;
   }
@@ -1139,11 +1156,13 @@ export class OrderService {
     if (!order) throw new BadRequestException('Order not found!');
 
     // Decrypt sensitive information
-    order.orderAddress.to_name = decryptProfile(order.orderAddress.to_name);
-    order.orderAddress.to_phone = decryptProfile(order.orderAddress.to_phone);
-    order.orderAddress.to_address = decryptProfile(
-      order.orderAddress.to_address,
-    );
+    if (order.order_type === OrderType.PHYSICAL) {
+      order.orderAddress.to_name = decryptProfile(order.orderAddress.to_name);
+      order.orderAddress.to_phone = decryptProfile(order.orderAddress.to_phone);
+      order.orderAddress.to_address = decryptProfile(
+        order.orderAddress.to_address,
+      );
+    }
     return order;
   }
 

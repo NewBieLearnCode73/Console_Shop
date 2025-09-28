@@ -208,13 +208,13 @@ export class AddressService {
     // Encrypt sensitive data before updating
     const encryptedUpdateData = { ...updateAddressDto };
     if (updateAddressDto.to_name) {
-      encryptedUpdateData.to_name = decryptProfile(updateAddressDto.to_name);
+      encryptedUpdateData.to_name = encryptProfile(updateAddressDto.to_name);
     }
     if (updateAddressDto.to_phone) {
-      encryptedUpdateData.to_phone = decryptProfile(updateAddressDto.to_phone);
+      encryptedUpdateData.to_phone = encryptProfile(updateAddressDto.to_phone);
     }
     if (updateAddressDto.to_address) {
-      encryptedUpdateData.to_address = decryptProfile(
+      encryptedUpdateData.to_address = encryptProfile(
         updateAddressDto.to_address,
       );
     }
