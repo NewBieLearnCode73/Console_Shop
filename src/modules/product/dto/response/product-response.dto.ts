@@ -17,6 +17,8 @@ export class ProductResponseDto {
   category_id: string;
   brand_id: string;
   image: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export class SearchProductResponseDto {

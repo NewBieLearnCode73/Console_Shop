@@ -23,8 +23,6 @@ import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { ProductVariantService } from './product_variant.service';
 import { ProductStatus } from 'src/constants/product_status.enum';
 import { ProductType } from 'src/constants/product_type.enum';
-import { Stock } from '../entity/stock.entity';
-@Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(Product)
@@ -185,6 +183,8 @@ export class ProductService {
         seo_description: product.seo_description,
         category_id: product.category?.id,
         brand_id: product.brand?.id,
+        created_at: product.createdAt,
+        updated_at: product.updatedAt,
       }),
     );
 
@@ -220,6 +220,8 @@ export class ProductService {
       seo_description: product.seo_description,
       category_id: product.category?.id,
       brand_id: product.brand?.id,
+      created_at: product.createdAt,
+      updated_at: product.updatedAt,
     });
   }
 
@@ -248,6 +250,8 @@ export class ProductService {
       seo_description: product.seo_description,
       category_id: product.category?.id,
       brand_id: product.brand?.id,
+      created_at: product.createdAt,
+      updated_at: product.updatedAt,
     });
   }
 
@@ -294,6 +298,8 @@ export class ProductService {
       seo_description: product.seo_description,
       category_id: product.category?.id,
       brand_id: product.brand?.id,
+      created_at: product.createdAt,
+      updated_at: product.updatedAt,
     });
   }
 
@@ -365,6 +371,8 @@ export class ProductService {
       seo_description: product.seo_description,
       category_id: product.category?.id,
       brand_id: product.brand?.id,
+      created_at: product.createdAt,
+      updated_at: product.updatedAt,
     });
   }
 
@@ -460,6 +468,8 @@ export class ProductService {
       seo_description: product.seo_description,
       category_id: product.category?.id,
       brand_id: product.brand?.id,
+      created_at: product.createdAt,
+      updated_at: product.updatedAt,
     });
   }
 

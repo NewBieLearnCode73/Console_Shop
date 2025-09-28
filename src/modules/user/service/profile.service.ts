@@ -34,7 +34,7 @@ export class ProfileService {
     });
 
     if (!profile) {
-      throw new NotFoundException('Profile not found');
+      return null;
     }
 
     return profile;
