@@ -203,6 +203,7 @@ export class PaymentService {
         order.user.email,
         order.user.email,
         order.orderItems,
+        order.shipping_fee,
         order.orderAddress.to_name,
         order.orderAddress.to_phone,
         order.orderAddress.to_address,

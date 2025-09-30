@@ -215,17 +215,30 @@ export function BrevoTemplateActiveAccount(
 `,
   };
 }
-
 export function BrevoTemplatePaymentSuccessPhysical(
   email: string,
   name: string,
   orderItems: OrderItem[],
+  shippingFee: number,
   to_name: string,
   to_phone: string,
   to_address: string,
   to_provice_name: string,
   to_ward_code: string,
 ) {
+  // Helper format tiền có dấu phẩy ngăn cách
+  const formatCurrency = (value: number) =>
+    value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+
+  // Tính tổng tiền hàng
+  const totalProductPrice = orderItems.reduce(
+    (acc, item) => acc + Number(item.price) * Number(item.quantity),
+    0,
+  );
+
+  // Tổng cộng = tiền hàng + phí ship
+  const totalAmount = totalProductPrice + Number(shippingFee);
+
   return {
     sender: {
       name: 'Console Shop Admin',
@@ -266,11 +279,29 @@ export function BrevoTemplatePaymentSuccessPhysical(
                 (item) => `<tr>
                   <td style="border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.productVariant.variant_name}</td>
                   <td style="text-align: center; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.quantity}</td>
-                  <td style="text-align: right; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.price} VNĐ</td>
+                  <td style="text-align: right; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${formatCurrency(Number(item.price))}</td>
                 </tr>`,
               )
               .join('')}
           </tbody>
+        </table>
+      </div>
+
+      <!-- Payment Summary -->
+      <div style="margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="text-align: left; padding: 8px 0; color: #6c757d;">Tổng tiền hàng:</td>
+            <td style="text-align: right; padding: 8px 0; font-weight: bold;">${formatCurrency(totalProductPrice)}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; padding: 8px 0; color: #6c757d;">Phí vận chuyển:</td>
+            <td style="text-align: right; padding: 8px 0; font-weight: bold;">${formatCurrency(Number(shippingFee))}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; padding: 12px 0; font-size: 16px; font-weight: bold; color: #495057;">Tổng cộng:</td>
+            <td style="text-align: right; padding: 12px 0; font-size: 16px; font-weight: bold; color: #10b981;">${formatCurrency(totalAmount)}</td>
+          </tr>
         </table>
       </div>
 
@@ -294,6 +325,12 @@ export function BrevoTemplatePaymentSuccessDigital(
   name: string,
   orderItems: OrderItem[],
 ) {
+  // Tính tổng tiền sản phẩm
+  const totalProducts = orderItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+
   return {
     sender: {
       name: 'Console Shop Admin',
@@ -308,6 +345,7 @@ export function BrevoTemplatePaymentSuccessDigital(
       <h1 style="color: white; margin: 0; font-size: 28px;">🛒 Console Shop</h1>
       <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Nền tảng mua sắm an toàn</p>
     </div>
+
     <!-- Body -->
     <div style="background: #ffffff; padding: 40px 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
       <h2 style="color: #495057; margin-top: 0;">Thanh toán thành công!</h2>
@@ -315,6 +353,7 @@ export function BrevoTemplatePaymentSuccessDigital(
         Xin chào <strong>${name}</strong>,<br><br>
         Cảm ơn bạn đã mua hàng! Thanh toán của bạn đã được xử lý thành công. Chi tiết đơn hàng như sau:
       </p>
+
       <!-- Order Details -->
       <div style="margin-bottom: 30px;">
         <h3 style="color: #495057; border-bottom: 2px solid #e9ecef; padding-bottom: 10px;">Chi tiết đơn hàng</h3>
@@ -330,12 +369,24 @@ export function BrevoTemplatePaymentSuccessDigital(
             ${orderItems
               .map(
                 (item) => `<tr>
-                  <td style="border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.productVariant.variant_name}</td>
-                  <td style="text-align: center; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.quantity}</td>
-                  <td style="text-align: right; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.price} VNĐ</td>
+                  <td style="border-bottom: 1px solid #e9ecef; padding: 10px 0;">
+                    ${item.productVariant.variant_name}
+                  </td>
+                  <td style="text-align: center; border-bottom: 1px solid #e9ecef; padding: 10px 0;">
+                    ${item.quantity}
+                  </td>
+                  <td style="text-align: right; border-bottom: 1px solid #e9ecef; padding: 10px 0;">
+                    ${item.price * item.quantity} VNĐ
+                  </td>
                 </tr>`,
               )
               .join('')}
+            <tr>
+              <td colspan="2" style="text-align: right; padding: 10px 0; font-weight: bold;">Tổng cộng:</td>
+              <td style="text-align: right; padding: 10px 0; font-weight: bold; color: #d9534f;">
+                ${totalProducts} VNĐ
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -349,11 +400,24 @@ export function BrevoTemplateChangeOrderAddressSuccessfully(
   email: string,
   name: string,
   orderItems: OrderItem[],
+  shippingFee: number,
   to_name: string,
   to_phone: string,
   to_address: string,
   to_provice_name: string,
 ) {
+  // Helper format tiền VNĐ
+  const formatCurrency = (value: number) =>
+    value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+
+  // Tính tổng tiền sản phẩm
+  const totalProducts = orderItems.reduce(
+    (sum, item) => sum + Number(item.price) * Number(item.quantity),
+    0,
+  );
+
+  const grandTotal = totalProducts + Number(shippingFee);
+
   return {
     sender: {
       name: 'Console Shop Admin',
@@ -385,7 +449,7 @@ export function BrevoTemplateChangeOrderAddressSuccessfully(
             <tr>
               <th style="text-align: left; border-bottom: 2px solid #e9ecef; padding: 10px 0;">Sản phẩm</th>
               <th style="text-align: center; border-bottom: 2px solid #e9ecef; padding: 10px 0;">Số lượng</th>
-              <th style="text-align: right; border-bottom: 2px solid #e9ecef; padding: 10px 0;">Giá</th>
+              <th style="text-align: right; border-bottom: 2px solid #e9ecef; padding: 10px 0;">Thành tiền</th>
             </tr>
           </thead>
           <tbody>
@@ -394,10 +458,22 @@ export function BrevoTemplateChangeOrderAddressSuccessfully(
                 (item) => `<tr>
                   <td style="border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.productVariant.variant_name}</td>
                   <td style="text-align: center; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.quantity}</td>
-                  <td style="text-align: right; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${item.price} VNĐ</td>
+                  <td style="text-align: right; border-bottom: 1px solid #e9ecef; padding: 10px 0;">${formatCurrency(Number(item.price) * Number(item.quantity))}</td>
                 </tr>`,
               )
               .join('')}
+            <tr>
+              <td colspan="2" style="text-align: right; padding: 10px 0; font-weight: bold;">Tổng tiền hàng:</td>
+              <td style="text-align: right; padding: 10px 0;">${formatCurrency(totalProducts)}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="text-align: right; padding: 10px 0; font-weight: bold;">Phí vận chuyển:</td>
+              <td style="text-align: right; padding: 10px 0;">${formatCurrency(Number(shippingFee))}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="text-align: right; padding: 10px 0; font-weight: bold;">Tổng cộng:</td>
+              <td style="text-align: right; padding: 10px 0; font-weight: bold; color: #d9534f;">${formatCurrency(grandTotal)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -421,6 +497,7 @@ export async function sendMailChangeOrderAddress(
   email: string,
   name: string,
   orderItems: OrderItem[],
+  shippingFee: number,
   to_name: string,
   to_phone: string,
   to_address: string,
@@ -432,6 +509,7 @@ export async function sendMailChangeOrderAddress(
       email,
       name,
       orderItems,
+      shippingFee,
       decryptProfile(to_name),
       decryptProfile(to_phone),
       decryptProfile(to_address),
@@ -483,6 +561,7 @@ export async function sendMailPaymentSuccessPhysical(
   email: string,
   name: string,
   orderItems: OrderItem[],
+  shippingFee: number,
   to_name: string,
   to_phone: string,
   to_address: string,
@@ -493,6 +572,7 @@ export async function sendMailPaymentSuccessPhysical(
     email,
     name,
     orderItems,
+    shippingFee,
     decryptProfile(to_name),
     decryptProfile(to_phone),
     decryptProfile(to_address),
