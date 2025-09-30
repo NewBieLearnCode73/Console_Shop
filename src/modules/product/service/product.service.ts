@@ -23,6 +23,7 @@ import { PaginationResult } from 'src/utils/pagination/pagination_result';
 import { ProductVariantService } from './product_variant.service';
 import { ProductStatus } from 'src/constants/product_status.enum';
 import { ProductType } from 'src/constants/product_type.enum';
+import { Stock } from '../entity/stock.entity';
 export class ProductService {
   constructor(
     @InjectRepository(Product)
@@ -398,9 +399,15 @@ export class ProductService {
 
     switch (newStatus) {
       case ProductStatus.ACTIVE:
-        if (currentStatus !== ProductStatus.INACTIVE) {
-          throw new BadRequestException('Can only activate from INACTIVE');
+        if (
+          currentStatus !== ProductStatus.INACTIVE &&
+          currentStatus !== ProductStatus.ARCHIVED
+        ) {
+          throw new BadRequestException(
+            'Can only activate from INACTIVE or ARCHIVED',
+          );
         }
+
         const hasStock = await this.productVariantService.hasAvailableStock(
           product.id,
         );

@@ -16,6 +16,7 @@ import { ProductService } from './service/product.service';
 import { ProductVariantController } from './controller/product-variant.controller';
 import { ProductVariantService } from './service/product_variant.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { Order } from '../order/entity/order.entity';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
       ProductVariant,
       Product,
       Stock,
+      Order,
     ]),
     SupabaseModule,
   ],
@@ -44,4 +46,4 @@ import { SupabaseModule } from '../supabase/supabase.module';
   ],
   exports: [ProductVariantService],
 })
-export class ProductModule { }
+export class ProductModule {}

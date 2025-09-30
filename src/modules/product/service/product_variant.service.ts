@@ -36,6 +36,7 @@ import {
   encryptKeyGame,
   hashKeyGame,
 } from 'src/utils/crypto_helper';
+import { Order } from 'src/modules/order/entity/order.entity';
 
 @Injectable()
 export class ProductVariantService {
@@ -942,6 +943,21 @@ export class ProductVariantService {
           throw new NotFoundException(`Variant with id ${id} not found`);
         }
 
+        const order = await manager.exists(Order, {
+          where: { orderItems: { productVariant: { id: variant.id } } },
+          relations: ['orderItems', 'orderItems.productVariant'],
+        });
+
+        console.log(order);
+
+        if (order) {
+          throw new BadRequestException(
+            'Cannot delete variant associated with existing orders!',
+          );
+        }
+
+        console.log(order);
+
         await manager.delete(this.productVariantRepository.target, { id });
       });
 
@@ -956,6 +972,8 @@ export class ProductVariantService {
       }
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
+
+      if (error instanceof BadRequestException) throw error;
 
       throw new InternalServerErrorException(
         `Failed to delete variant ${id}: ${error.message}`,
